@@ -113,6 +113,10 @@ predecessors did.
 | yes
 | REUSE licence texts, dual-licence model (code MPL-2.0 / docs CC-BY-SA-4.0)
 
+| `Project.toml`
+| optional
+| julia-library archetype: Pkg reads the package manifest from the package root only
+
 | `README.adoc`
 | yes
 | -
@@ -180,6 +184,10 @@ predecessors did.
 | `src/`
 | yes
 | -
+
+| `test/`
+| optional
+| julia-library archetype: Pkg.test runs test/runtests.jl, a fixed path (the spine keeps tests/)
 
 | `tests/`
 | yes

@@ -10,7 +10,9 @@
 This plan turns the architecture in
 link:APODEIXIS-VERIFICATION-DESIGN.adoc[APODEIXIS-VERIFICATION-DESIGN] into
 incremental, reviewable software. It prefers a tiny sound subset and explicit
-`UNSUPPORTED` results over broad but ungrounded claims.
+`UNSUPPORTED` results over broad but ungrounded claims. For the detailed
+work-package dependency graph and contributor handoff protocol, see the
+link:APODEIXIS-ULTRAPLAN.adoc[Apodeixis Ultra-Plan].
 
 The first source-policy slice now exists:
 

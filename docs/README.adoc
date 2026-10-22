@@ -15,6 +15,7 @@ and CI fails if it goes stale, so prefer it over any hand-written listing.
 * link:EXPLAINME.adoc[EXPLAINME] — how the pieces actually work.
 * link:architecture/APODEIXIS-VERIFICATION-DESIGN.adoc[Apodeixis verification design] — compiler, proof, numeric, and FFI architecture.
 * link:architecture/APODEIXIS-MVP-IMPLEMENTATION-PLAN.adoc[Apodeixis MVP implementation plan] — current implementation slice and acceptance gates.
+* link:architecture/APODEIXIS-ULTRAPLAN.adoc[Apodeixis ultra-plan] — staged work packages, dependencies, risks, release gates, and handoff process.
 
 == The tracks
 

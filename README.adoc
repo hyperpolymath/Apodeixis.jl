@@ -63,6 +63,7 @@ passes exist.
 
 * link:docs/architecture/APODEIXIS-VERIFICATION-DESIGN.adoc[Verification architecture] — hybrid frontend, four numeric tiers, memory discipline, FFI seam, worked example, and proof lifecycle.
 * link:docs/architecture/APODEIXIS-MVP-IMPLEMENTATION-PLAN.adoc[MVP implementation plan] — existing package slice, ordered implementation work, and acceptance gates.
+* link:docs/architecture/APODEIXIS-ULTRAPLAN.adoc[Ultra-plan] — dependency-ordered work packages, acceptance gates, risks, and contributor handoff protocol.
 * link:src/interface/Abi/README.adoc[ABI interface scaffolding] — current Idris2 ABI files and their limitations.
 
 The numeric design keeps mathematical integers/rationals, fixed-width
