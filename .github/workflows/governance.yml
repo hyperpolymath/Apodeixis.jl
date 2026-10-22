@@ -1,0 +1,20 @@
+# This workflow is managed by gh actions-lock.
+# SPDX-License-Identifier: MPL-2.0
+name: Governance
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  actions: read      # required by the reusable workflow (staleness check reads workflow runs)
+  contents: read
+
+jobs:
+  governance:
+    uses: hyperpolymath/standards/.github/workflows/governance-reusable.yml@b3ce78e1a8cb24b33fde5c9da6a7c09486efda78

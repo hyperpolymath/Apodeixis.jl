@@ -1,0 +1,83 @@
+# This workflow is managed by gh actions-lock.
+# SPDX-License-Identifier: MPL-2.0
+#
+# Standalone Hypatia security scan (push / PR / weekly). This is NOT a duplicate
+# of the `hypatia-scan` job in `static-analysis-gate.yml`: that job exists to
+# feed the gitbot-fleet LEARNING pipeline (via `deposit-findings`), whereas this
+# workflow is the repo's independent security scan. Same tool, two consumers.
+# See .github/workflows/README.adoc.
+name: Hypatia Security Scan
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  actions: read      # required by the reusable workflow (staleness check reads workflow runs)
+  contents: read
+  security-events: write
+
+jobs:
+  hypatia:
+    uses: hyperpolymath/standards/.github/workflows/hypatia-scan-reusable.yml@b3ce78e1a8cb24b33fde5c9da6a7c09486efda78
+    # The reusable declares only the HYPATIA_SCAN_PAT secret and falls back to
+    # the job token when the caller does not pass it; nothing is inherited.
+
+  # The Hypatia grid comment: one per pull request, regenerated in place under
+  # its marker (standards docs/VERDICT-GRID-SPEC.adoc, "Posting from a caller").
+  # The reusable renders the grid and uploads it; it holds no write permission,
+  # so the caller posts it.
+  verdict:
+    name: Post the Hypatia verdict grid
+    needs: hypatia
+    # A fork or Dependabot pull request gets a read-only token, so the comment
+    # call would fail; the scan itself still runs in the hypatia job. The
+    # pull request author, not github.actor (whoever triggered the run), names
+    # a Dependabot pull request.
+    if: >-
+      always() && github.event_name == 'pull_request'
+      && needs.hypatia.result != 'skipped'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Download the grid
+        uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: verdict-grid
+          path: ${{ runner.temp }}/verdict-grid
+
+      - name: Create or update the grid comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GRID: ${{ runner.temp }}/verdict-grid/report.md
+          MARKER: '<!-- verdict-grid:hypatia regenerated on every run -->'
+        run: |
+          set -euo pipefail
+          if [ ! -s "$GRID" ]; then
+            echo "::warning::the verdict-grid artifact holds no report.md; the scan did not render a grid, see its job"
+            exit 0
+          fi
+          comment_id="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+            | jq -r --arg m "$MARKER" \
+                '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains($m)))] | last | .id // ""')"
+          jq -n --rawfile body "$GRID" '{body: $body}' > "$RUNNER_TEMP/grid-comment.json"
+          if [ -n "$comment_id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" --input "$RUNNER_TEMP/grid-comment.json" >/dev/null
+          else
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --input "$RUNNER_TEMP/grid-comment.json" >/dev/null
+          fi

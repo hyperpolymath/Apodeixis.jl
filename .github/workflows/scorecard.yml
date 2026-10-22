@@ -1,0 +1,26 @@
+# This workflow is managed by gh actions-lock.
+# SPDX-License-Identifier: MPL-2.0
+name: OSSF Scorecard
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  actions: read      # required by the reusable workflow (staleness check reads workflow runs)
+  contents: read
+
+jobs:
+  scorecard:
+    uses: hyperpolymath/standards/.github/workflows/scorecard-reusable.yml@b3ce78e1a8cb24b33fde5c9da6a7c09486efda78
+    # Reusable called-workflow permissions are CAPPED by the caller's grants;
+    # without security-events: write here the scorecard SARIF upload fails with
+    # startup_failure (hypatia WF018). id-token: write enables OIDC publish.
+    permissions:
+      contents: read
+      security-events: write
+      id-token: write
