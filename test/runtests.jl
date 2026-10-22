@@ -22,6 +22,44 @@ codes(report) = Set(f.code for f in report.findings)
         @test is_policy_clean(report)
     end
 
+    @testset "short function signature wrappers preserve verification boundaries" begin
+        for signature in (
+            "f(A)",
+            "f(A)::Int",
+            "f(A::T) where T",
+            "f(A::T)::Int where T",
+            "(f(A::T) where T)::Int",
+            "f(A::Vector{T})::T where T<:Integer",
+            "f(A::Vector{T}, x::S)::T where T where S",
+        )
+            body = "$signature = (@inbounds A[1])"
+
+            annotated = audit_source("@verified $body"; mutation_score=100)
+            @test is_policy_clean(annotated)
+            @test isempty(annotated.findings)
+
+            nested = audit_source("""
+                @verified function outer(A)
+                    $body
+                    f(A)
+                end
+                """; mutation_score=100)
+            @test codes(nested) == Set((:APX_INBOUNDS_OUTSIDE_VERIFIED,))
+
+            nested_annotated = audit_source("""
+                @verified function outer(A)
+                    @verified $body
+                    f(A)
+                end
+                """; mutation_score=100)
+            @test is_policy_clean(nested_annotated)
+        end
+
+        # A typed variable assignment is not a short function definition.
+        invalid = audit_source("@verified x::Int = 1")
+        @test codes(invalid) == Set((:APX_INVALID_VERIFIED_MARKER,))
+    end
+
     @testset "inbounds needs both policy gates" begin
         source = """
             @verified function getfirst(A::Vector{Int})
@@ -64,6 +102,15 @@ codes(report) = Set(f.code for f in report.findings)
         end
         @test :APX_UNMODELED_CCALL in codes(
             audit_source("function f(p); ccall(:f, Cvoid, (), p); end"))
+        for source in (
+            "global mutable_state = 1",
+            "global mutable_state",
+            "@verified function f(); global mutable_state = 1; end",
+        )
+            report = audit_source(source)
+            @test report.status === :rejected
+            @test codes(report) == Set((:APX_GLOBAL_MUTATION,))
+        end
     end
 
     @testset "unelaborated macros and nested verification boundaries" begin

@@ -32,8 +32,10 @@ as runtime-validated.
 Not implemented: contract elaboration/VC semantics, typed SSA inspection,
 monomorphized call-graph closure, world-age fingerprinting, numeric-tier
 checking, alias proofs, allocation proof, ABI manifest validation, solver
-witnesses, ECHIDNA transport, or Warrant/Receipt issuance. These remain
-`UNSUPPORTED` rather than implied by a policy-clean report.
+witnesses, ECHIDNA transport, or Warrant/Receipt issuance. The current
+`AuditReport` returns only `:policy_clean` or `:rejected`; neither status
+establishes these capabilities. `UNSUPPORTED` describes the future verifier's
+behavior for these unimplemented features.
 
 Apodeixis is a source-to-obligation compiler for a deliberately restricted,
 closed Julia program. It is not a theorem prover for arbitrary Julia. A verified
@@ -320,6 +322,7 @@ record SliceSpec where
   offset : Bits64
   count : Bits64
   (0 nonNull : So (base /= 0))
+  (0 positiveCount : So (count > 0))
   (0 inBounds : offset + count <= maxElements)
 
 public export
@@ -336,10 +339,11 @@ portable pointer representation.
 == Worked end-to-end kernel: row bound scanner
 
 This example scans a nonnegative Int64 row and writes suffix lower bounds. It
-uses a verified Zig helper to compute a maximum, then Julia writes a prefix
-accumulation. `Int64` arithmetic is Tier 2: every add is checked, not assumed
-mathematical. To keep the example readable, the shown pseudocode helper
-`checked_add` returns `(value, ok)` and has a verified summary. Macro names are
+uses a verified Zig helper to compute the row maximum, then Julia writes a
+suffix accumulation combined with that maximum: each output is the maximum of
+the suffix sum and the row maximum. `Int64` arithmetic is Tier 2: every add is
+checked, not assumed mathematical. To keep the example readable, the shown
+pseudocode helper `checked_add` returns `(value, ok)` and has a verified summary. Macro names are
 proposed surface syntax. The caller supplies non-overlapping buffers; the
 verifier establishes their full-array disjointness, not merely distinct Julia
 wrapper objects.
@@ -384,7 +388,7 @@ wrapper objects.
         s, ok = checked_add(acc, row[i])
         ok || return out  # defensive fallback; precondition proves unreachable
         acc = s
-        out[i] = acc
+        out[i] = max(acc, m)
     end
     return out
 end
@@ -395,9 +399,9 @@ runtime helpers. The sum precondition makes every nonnegative suffix fit in
 `Int64`; the checked-add failure branch is retained as a defensive runtime
 fallback but is proved unreachable on the verified entry path. The loop
 invariant ties `acc` to the mathematical suffix sum, while `m` from Zig is
-checked against the helper's verified maximum specification. A production API
-may instead return an explicit status and state initialized-output guarantees
-for a reachable failure path.
+checked against the helper's verified maximum specification and combined with
+`acc` in each output value. A production API may instead return an explicit
+status and state initialized-output guarantees for a reachable failure path.
 
 === Generated VCs and evidence
 
@@ -437,7 +441,8 @@ The verifier lowers the function and emits obligations similar to these
 
 |`LOOP-01` invariant
 |At loop head, `acc` is the checked sum of the processed suffix and all written
-  cells are initialized and nonnegative.
+  cells contain the maximum of their suffix sum and the row maximum, hence are
+  initialized and nonnegative.
 |Induction over reverse loop; Tier 2 QF_BV obligations.
 
 |`BOUNDS-01`

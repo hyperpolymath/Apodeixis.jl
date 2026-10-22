@@ -65,8 +65,15 @@ function _callee_symbol(x)
     return nothing
 end
 
-_is_short_function_definition(x) = x isa Expr && x.head === :(=) &&
-    !isempty(x.args) && first(x.args) isa Expr && first(x.args).head === :call
+function _is_short_function_definition(x)
+    x isa Expr && x.head === :(=) && !isempty(x.args) || return false
+    signature = first(x.args)
+    # Return types and type parameters can wrap the call signature in either order.
+    while signature isa Expr && signature.head in (:(::), :where) && !isempty(signature.args)
+        signature = first(signature.args)
+    end
+    return signature isa Expr && signature.head === :call
+end
 _is_function_expr(x) = x isa Expr && (x.head === :function || _is_short_function_definition(x))
 _macro_symbol(x) = x isa Symbol ? x : _callee_symbol(x)
 
@@ -80,7 +87,7 @@ function _walk!(x, verified::Bool, mutation_score, line::Int,
     if x.head in (:error, :incomplete)
         _push_once!(findings, :APX_PARSE_ERROR, line,
                     "JuliaSyntax returned an incomplete or erroneous syntax node")
-    elseif x.head === :global && verified
+    elseif x.head === :global
         _push_once!(findings, :APX_GLOBAL_MUTATION, line,
                     "global declarations are outside the verified capability subset")
     elseif x.head === :foreigncall

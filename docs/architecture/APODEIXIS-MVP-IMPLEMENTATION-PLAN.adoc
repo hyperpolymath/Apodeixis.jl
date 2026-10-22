@@ -62,8 +62,9 @@ CI-originated test artifact before that gate is used as release evidence.
 
 The initial rule set rejects `@eval`, `@generated`, and `@fastmath` macros;
 `eval` and `invokelatest` calls; unmodeled `ccall`/lowered foreign calls; global
-declarations inside `@verified`; unknown macros inside `@verified`; and
-`@inbounds` outside an annotated function or without the mutation threshold.
+declarations at file scope or inside functions; unknown macros inside
+`@verified`; and `@inbounds` outside an annotated function or without the
+mutation threshold.
 Any parse failure is rejected. The names
 `@verified`, `@pre`, `@post`, `@invariant`, `@cap`, `@tier`, `@noalloc`, and
 `@echo` are recognized as syntax markers only. No annotation is expanded or
