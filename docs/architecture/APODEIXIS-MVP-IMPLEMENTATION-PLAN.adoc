@@ -89,7 +89,9 @@ its fail-closed tests and independent evidence boundary are in place.
 |B. Contract syntax model
 |Not started
 |Introduce `ContractSpec`, `CapabilitySpec`, and `TierSpec`; recognize only
-  literal, bounded syntax for the seven contract/effect annotations; preserve
+  literal, bounded syntax for the seven contract/effect annotations
+  (`@pre`, `@post`, `@invariant`, `@cap`, `@tier`, `@noalloc`, and `@echo`);
+  treat `@verified` as a separate function marker; preserve
   JuliaSyntax source ranges; reject duplicate, malformed, dynamic, or unknown
   attributes. Add canonical serialization and golden parser fixtures.
 |Every accepted annotation round-trips deterministically; tests show macro
