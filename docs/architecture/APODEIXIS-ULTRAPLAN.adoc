@@ -1,0 +1,677 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Apodeixis.jl Ultra-Plan: A Buildable Route to a Verified Julia Subset
+:toc:
+:toclevels: 3
+:sectnums:
+
+== Mission and how to use this plan
+
+This is the execution plan for taking the current Apodeixis.jl repository from
+its 0.1 source-policy audit to a small, useful, independently checkable Julia
+verification toolchain. It is written so a future maintainer, contributor, or
+coding agent can choose a bounded task, understand its prerequisites, implement
+it without inventing trust claims, and leave a testable handoff.
+
+This plan is deliberately *not* a promise that the complete ambition can be
+implemented in one pass. Build the smallest vertical slice that has a precise
+semantics, an independent check, and adversarial tests. Do not begin downstream
+solver, FFI, or bot integration while its prerequisites are still `UNKNOWN`.
+
+Use this document with:
+
+* link:APODEIXIS-VERIFICATION-DESIGN.adoc[Verification architecture] for the
+  semantic model and full trust boundaries.
+* link:APODEIXIS-MVP-IMPLEMENTATION-PLAN.adoc[MVP implementation plan] for the
+  short roadmap and present feature breakdown.
+* the current package: `Project.toml`, `src/Apodeixis.jl`,
+  `scripts/apodeixis.jl`, and `test/runtests.jl`.
+
+=== Project snapshot
+
+As of 2026-10-22, the repository has a Julia package using JuliaSyntax.jl, a
+non-proving source-policy audit, a CLI, policy tests, an Idris2 ABI scaffold,
+Zig build scaffolding, and architecture documents. Julia is not available in
+the implementation environment recorded by the initial package work; run the
+package tests in a Julia-enabled environment before relying on the code. The
+source-policy report value `:policy_clean` is *not* `PROVED`, `VERIFIED`, or a
+Warrant. The compiler adapter, contract elaborator, VC generator, ECHIDNA
+transport, proof witnesses, ABI checker, and Receipt issuer do not exist yet.
+
+== Product boundary
+
+=== First real product target
+
+The first useful release target is not "verify Julia". It is:
+
+[quote]
+____
+Given one annotated, closed, pure Julia function in a documented supported
+subset, either produce a checked proof of its contract under explicit numeric
+and compiler assumptions, produce a counterexample, or return an explicit
+`UNKNOWN` / `UNSUPPORTED` result.
+____
+
+The first end-to-end proof should be a scalar Tier 1 affine function, with a
+caller precondition, a postcondition, a named generated VC, and an independently
+replayable proof result. Arrays, floating point, `@inbounds`, and FFI are later
+milestones.
+
+=== Out of scope for early milestones
+
+* Sound verification of arbitrary Julia, dynamic dispatch, reflection, macros,
+  generated functions, world-age changes, tasks, or concurrent mutation.
+* Trusting a solver's `unsat` string, a green test suite, JET silence, mutation
+  score, runtime assertion, or a `POLICY CLEAN` audit as a formal proof.
+* Mapping `Float64` onto mathematical `Real` or conflating wrapping machine
+  arithmetic with unbounded integer arithmetic.
+* Treating statistical/ML confidence as deterministic functional safety.
+* Supporting arbitrary foreign calls, callbacks, retained pointers, or
+  unverified layout facts.
+
+Unsupported constructs must stop verification, not be ignored or erased.
+
+== Principles every contributor must preserve
+
+. *Fail closed:* each stage returns a typed status (`PROVED`, `REFUTED`,
+  `UNKNOWN`, `UNSUPPORTED`, or `POLICY_REJECTED`). Errors and timeouts are not
+  success.
+. *One proof claim, one exact model:* every proof names its source hash,
+  specialized method/call graph, Julia version, target, dependency manifest,
+  tier semantics, assumptions, and checker versions.
+. *No execution in the frontend:* JuliaSyntax parses the user's source; macro
+  contracts are parsed as restricted data. Do not `include`, `eval`, or expand
+  arbitrary user macros as part of analysis.
+. *Separate syntax from compiler facts:* preserve source spans in the syntax
+  layer; isolate version-specific `Core.Compiler` / `CodeInfo` assumptions in
+  an adapter; lower both into a small internal IR.
+. *Independent check:* proof search is outside the trusted checker. A local
+  Warrant remains `INCOMPLETE` until the independent Dedukti/Coq/Lean checking
+  pipeline has accepted the exact bound artifact.
+. *Explicit arithmetic:* integer, rational, bitvector, IEEE, and probabilistic
+  semantics remain distinct in IR, VC, certificate, report, and cache key.
+. *Negative tests are mandatory:* each admitted language feature needs tests
+  showing nearby unsupported or unsafe programs are rejected.
+. *Small trusted base:* do not let solver APIs, compiler internals, or foreign
+  libraries leak across their adapter boundaries into general validation code.
+
+== Repository map for implementers
+
+[cols="1,2,3",options="header"]
+|===
+|Path |Use it for |Do not use it for
+
+|`Project.toml`
+|Package identity, dependency compatibility, test target.
+|A generated or manually drifting dependency lock. Decide and document the
+  package's manifest/lock policy before claiming reproducible proof builds.
+
+|`src/Apodeixis.jl`
+|Public package entry and the current policy-audit implementation.
+|Permanent home for parser internals, compiler private APIs, or all future
+  passes in one large module. Split adapters as they become real.
+
+|`scripts/apodeixis.jl`
+|Thin command-line parsing and presentation.
+|Verification semantics or proof decisions duplicated outside the package.
+
+|`test/runtests.jl`
+|Julia package tests, beginning with parser/policy behavior.
+|A replacement for VC soundness tests, independent checker tests, or end-to-end
+  proof fixtures.
+
+|`src/interface/Abi/`
+|Existing Idris2 types/layout scaffold; evolve into generated target-specific
+  contracts only after probing actual ABI facts.
+|A claim that its template constants establish every target's ABI.
+
+|`src/interface/ffi/`
+|Existing Zig integration scaffold.
+|A claim that any Julia pointer is safe merely because Zig is used.
+
+|`verification/proofs/`
+|Existing Agda, Coq, Idris2, Lean, and TLA+ scaffolding. Add proof packages
+  with explicit versions/manifests and runnable checks.
+|A repository-wide certificate checker before its exact role and trust model
+  are proven.
+
+|`docs/architecture/`
+|Architecture, roadmap, and handoff documents.
+|A substitute for executable acceptance tests or verified behavior.
+|===
+
+Add generated output, caches, manifests, and temporary solver files only under
+existing ignore/external-storage conventions. Do not commit build products or
+proof databases unless a reviewed reproducibility design requires them.
+
+== Dependency graph and milestone gates
+
+[cols="1,2,2,3",options="header"]
+|===
+|Milestone |Needs |Deliver |Cannot claim yet
+
+|M0. Runtime baseline
+|Repository baseline
+|Julia-enabled test/CI path, supported Julia versions, reproducible package
+  load, passing parser/policy suite.
+|Any semantic verification result.
+
+|M1. Surface contract model
+|M0
+|Non-executing parser for contracts, tiers, capabilities, source locations,
+  normalized serialization, explicit parser errors.
+|A precondition is not yet assumed or a postcondition proved.
+
+|M2. Compiler facts adapter
+|M0 + M1
+|Version-isolated typed-code adapter, specialization request model, type/call
+  graph facts, target/world/dependency fingerprint or explicit unsupported.
+|A closed call graph until every reachable edge is accounted for.
+
+|M3. Internal IR and closed core
+|M1 + M2
+|Small normalized IR, function boundary/CFG model, effects and supported call
+  summaries, typed result states.
+|Any VC result until lowering is tested against defined semantics.
+
+|M4. Tier 1 end-to-end scalar proof
+|M3
+|Affine integer/rational VC generation, Why3/SMT request, negative model, checked
+  proof witness and report for one closed kernel.
+|Tier 2 machine integer, float, array, or FFI safety.
+
+|M5. Tier 2 arrays and loops
+|M4
+|Explicit QF_BV semantics, checked overflow, vector bounds/borrow model,
+  invariants, proof-backed first `@inbounds`.
+|Generic views/aliasing or allocation claims beyond supported model.
+
+|M6. FFI proof seam
+|M5 + ABI facts + Idris2/Zig checker capability
+|One target-specific manifest and Julia preserve/conversion + layout + Zig
+  no-retain proof for one wrapper.
+|Arbitrary `ccall`, other target triples, callbacks, retained pointers.
+
+|M7. Tier 3 / Tier 4 separation
+|M3 + proof checker path
+|Strict IEEE operation/error model and a separate statistical evidence status.
+|Float-to-real substitution or deterministic claims from statistical evidence.
+
+|M8. Receipts, cache, CI bot
+|At least one verified vertical slice; stable proof wire protocol
+|BLAKE3 dependency key, INCOMPLETE Warrant, independent COMPLETE Receipt,
+  cache invalidation and least-privilege PR reporting.
+|A green bot check before independent receipt validation.
+|===
+
+Dependency order is a safety constraint. M6 may proceed in parallel with M7
+only after the internal IR and receipt contract are stable; it must not invent a
+separate status or trust model. M8 comes after a proof can be independently
+checked locally; do not build the bot first and retrofit trust later.
+
+== Work packages and execution checklists
+
+Each package has one primary output, a completion gate, and an explicit stop
+condition. A PR may split a work package into smaller changes, but must not
+claim the whole package complete while its gate is red.
+
+=== WP-00 — Runtime, environment, and current tests
+
+*State:* immediate; runtime validation outstanding.
+
+*Tasks:*
+
+. Run on Julia 1.9 (declared compatibility floor) and current stable Julia.
+. Instantiate `Project.toml`, run `Pkg.test()`, the CLI help path, and a CLI
+  audit against positive and negative fixture files.
+. Fix parser API or syntax issues; pin supported dependency ranges and decide
+  whether to commit a `Manifest.toml` for CI/dev tooling or keep the package as
+  a library without a committed lock.
+. Add a Julia CI workflow using the repository's existing action pinning and
+  `actions.lock` conventions; include the Julia workflow in the lock file and
+  run the repository action-lock consistency check.
+. Check formatter/linter policy after adding the workflow; do not bypass a red
+  mandatory job with `continue-on-error`.
+. Record all commands, Julia build strings, OS and outcomes in the PR.
+
+*Completion gate:* tests pass on floor and current stable, CLI exit status and
+messages are tested, action locks are current, no source or macro is executed
+by the parser tests.
+
+*Stop if:* JuliaSyntax's API differs, package load fails, or a test reveals
+macro expansion. Repair the base before adding contract semantics.
+
+=== WP-01 — Stabilize the audit/report API
+
+*Tasks:*
+
+. Define stable status and diagnostic types; keep `POLICY CLEAN` explicitly
+  distinct from proof statuses.
+. Add report schema version, tool version, filename/source digest, parser version,
+  deterministic finding ordering and deterministic text/JSON serialization.
+. Test qualified and unqualified calls/macros, nesting, line spans, parse error
+  nodes, quoted syntax, aliases/indirection limitations, and CLI exit codes.
+. Correct scope rules so a finding only applies to the proof region it claims to
+  audit; document constructs a purely syntactic scan cannot soundly identify.
+. Remove the CLI's trust in an arbitrary mutation score as a proof-like fact.
+  For now label it as a user-supplied local gate, not evidence. Design a CI
+  artifact schema before consuming a measured score.
+
+*Completion gate:* deterministic snapshots, stable diagnostic documentation,
+full CLI integration test, and no `:policy_clean` wording that implies safety.
+
+*Stop if:* the syntax tree cannot identify a construct without executing code;
+return `UNSUPPORTED` and preserve the source location.
+
+=== WP-02 — Contract and capability syntax model
+
+*Target API:* `parse_contracts(source)::ParseReport{ContractUnit}`.
+
+*Types to define:* `ContractUnit`, `FunctionDecl`, `ContractSpec`, `ExprTerm`,
+`CapabilitySet`, `NumericTier`, `SourceSpan`, `ParseDiagnostic`. Keep the AST
+independent of `JuliaSyntax` node layouts after normalization.
+
+*Tasks:*
+
+. Design grammar for only `@verified`, `@pre`, `@post`, `@invariant`, `@cap`,
+  `@tier`, `@noalloc`, and `@echo` forms. Specify whether declaration macros
+  attach to a function prefix or appear in a body; support one syntax initially.
+. Accept only literals, local identifiers, approved operators, named logical
+  predicates, and finite type annotations. Reject interpolation, macro calls in
+  contract expressions, dynamic lookup, arbitrary function execution, malformed
+  names, duplicate tier declarations, and conflicting effect declarations.
+. Normalize alpha-renamable binders, preserve source spans, and serialize a
+  deterministic structural form. Names may be removed for alpha-equivalence
+  only when binding structure and types remain intact.
+. Add grammar fixtures for each accepted form and near miss. Assert no
+  `eval`, macro expansion, `include`, or method dispatch over user expressions.
+. Add round-trip/canonicalization tests that show equivalent spelling has the
+  same normalized representation and inequivalent binding/type has a different
+  representation.
+
+*Completion gate:* parser is pure data transformation, diagnostics identify
+source ranges, golden representation tests are stable across supported Julia
+minors, every unsupported expression rejects the function from later analysis.
+
+*Stop if:* a contract expression needs ordinary Julia evaluation to interpret.
+Defer it rather than introduce execution.
+
+=== WP-03 — Supported Julia version and compiler adapter
+
+*Target API:* `specialize(entry, argtypes, world_policy)::CompilerFacts`.
+
+*Tasks:*
+
+. Pick a narrow Julia compatibility matrix and explain what is stable public API
+  versus `Core.Compiler` private API. Pin at least one test runtime for each
+  adapter implementation.
+. Build an adapter module per supported Julia minor or adapter family. It alone
+  may read version-specific `CodeInfo`, `MethodInstance`, inference results,
+  world counters, or call edges.
+. Capture concrete method signature, return type, SSA IR, call targets, argument
+  and SSA slot types, source identity, compilation flags, target triple, and
+  applicable world data where obtainable.
+. Never promise a globally frozen Julia world. Model a closed analysis snapshot:
+  capture world/dependency fingerprints, identify new applicable methods or
+  invalidations where possible, and re-run analysis when any dependency changes.
+. Confirm whether `code_typed` can provide required facts without relying on
+  undocumented internals. If not, isolate the private adapter and prove its
+  output invariants before downstream passes consume it.
+. Add fixtures for concrete dispatch, abstract `Any`, dynamic call, `invoke`,
+  keyword lowering, recursion, generated method, method ambiguity, dependency
+  change, and unsupported builtin/intrinsic.
+
+*Completion gate:* adapter returns facts plus version tag, not proof. Unknown
+call edge, unresolved `Any`, unsupported intrinsic, incomplete world facts, or
+unrecognized IR node produces `UNSUPPORTED` / `UNKNOWN`, never an empty graph.
+Golden adapter tests run on every supported Julia version.
+
+*Stop if:* a compiler field/version change makes semantics unclear. Add an
+adapter test/compatibility rule; do not scatter a fallback through core code.
+
+=== WP-04 — Closed call graph and typed internal IR
+
+*Tasks:*
+
+. Define normalized IR with explicit variables, SSA definitions, block/branch
+  edges, phi nodes, function calls, effects, numeric types and source spans.
+. Validate SSA graph invariants before any proof pass: every use is defined,
+  block edges are consistent, value types are known, and all call edges are
+  accounted for.
+. Resolve each concrete call edge to an analyzed body or reviewed summary.
+  Summaries specify input types, output type, effects, tier behavior,
+  preconditions, postconditions and summary version/hash.
+. Support a tiny pure core initially: literals, local assignments, integer and
+  rational add/sub/negate/order, conditionals, returns, and explicitly modeled
+  comparisons. Reject exceptions and side effects until specified.
+. Record method table/world fingerprint, specialization tuple, dependency
+  identity and compiler build in canonical analysis input.
+. Cross-check a sample lowering against a second representation/reference
+  interpreter; test branch and phi semantics.
+
+*Completion gate:* IR validator accepts only explicit supported constructs;
+programs containing hidden dynamic calls, unmodeled global reads/writes, open
+world dispatch, reflection or `Any` fail closed. No obligation is generated for
+an invalid IR.
+
+=== WP-05 — VC/status layer before solvers
+
+*Tasks:*
+
+. Define typed `Obligation`, assumptions, goal, source provenance, tier, and
+  expected result. Define `PROVED`, `REFUTED`, `UNKNOWN`, `UNSUPPORTED`, and
+  `POLICY_REJECTED` result variants.
+. Define stable obligation IDs from canonical source/IR/contract identity, not
+  line number alone. Line changes must update provenance but not accidentally
+  conflate different goals.
+. Implement a deliberately simple evaluator/reference semantics for the first
+  supported scalar IR and compare generated obligation meaning against it.
+. Test counterexample extraction with hand-built models; distinguish solver
+  timeout, parser error, unsupported theory and satisfiable negated goal.
+. Define a prover request interface independent of a specific solver, with
+  explicit theory/tier/version and bounded resource configuration.
+
+*Completion gate:* no claim word `PROVED` is constructible from process exit code
+or text output. Only the proof-check path (added later) may construct it.
+
+=== WP-06 — Tier 1 affine integers/rationals
+
+*Tasks:*
+
+. Specify mathematical `Int` and `Rational` semantics separately. Julia `Int`
+  is fixed-width: admit it as mathematical integer only with range/no-overflow
+  VCs at every operation; otherwise reject or classify as Tier 2.
+. Support affine addition, subtraction, negation, comparisons, and conjunction/
+  disjunction of supported constraints. Separate integer Presburger from
+  rational LRA theories in the IR and VC serializer.
+. Reject non-linear multiplication, non-constant division, unsupported floor,
+  modulo, conversion, rounding, and integer overflow behavior.
+. Add a reference enumerator over bounded small domains for testing; do not use
+  it as the general proof method.
+. Choose the ECHIDNA/Why3 transport schema only after the abstract obligation
+  API is stable. Ensure solver replies bind to the exact request digest.
+. First demonstration: prove a simple affine postcondition; second demonstration:
+  show a false postcondition is `REFUTED` with a concrete counterexample.
+
+*Completion gate:* proofs have replayable/checkable witnesses; counterexamples
+are validated by internal evaluation; unsupported theories stay explicit.
+
+=== WP-07 — Machine bitvectors, arrays, loops, and mutation
+
+*Tasks:*
+
+. Add explicit bit width, signedness, wrap/checked semantics for every
+  operation; implement Tier 2 mapping only after reference tests establish
+  Julia's exact behavior for the supported operations.
+. Add vector facts (axes, length, element type) and 1-based index semantics;
+  prove index arithmetic before converting to a bounds-free access.
+. Implement loop CFG/invariant obligations with induction; initially restrict to
+  simple counted loops over vectors and constant/affine ranges.
+. Model read/write footprints by backing object identity and intervals. Reject
+  overlapping mutable borrows; do not infer `SubArray` disjointness from wrapper
+  identity. Add slices/views only with precise parent/index-map semantics.
+. Add `@inbounds` only after corresponding bound VC is proved. Require the
+  project mutation-testing gate >=95% for CI policy, but never treat score as a
+  substitute for proof. The score input must come from trusted CI evidence
+  before release use.
+. Test alias counterexamples, boundary indices, empty arrays, negative steps,
+  checked overflow, wraparound, and view-parent overlap.
+
+*Completion gate:* Tier 2 operation-by-operation reference suite passes;
+accepted unchecked load/store is dominated by proof of in-bounds; every
+mutation has a unique proven footprint.
+
+=== WP-08 — `@noalloc` and JET evidence
+
+*Tasks:*
+
+. Define scope of a no-allocation claim: compiled normal path, target, Julia
+  build, warmup, exceptional paths, and runtime allocations included/excluded.
+. Make typed-IR escape/allocation analysis conservative. Unknown helper,
+  boxing, captured closure, dynamic dispatch, or unmodeled runtime call means
+  `UNKNOWN` / rejected claim.
+. Integrate JET as diagnostics only. Do not elevate a clean JET report to proof.
+. Add warmed `@allocated` regression tests for selected kernels and retain
+  complete measurement context.
+
+*Completion gate:* report static findings and dynamic measurements separately;
+unknown behavior blocks a static no-allocation claim.
+
+=== WP-09 — Idris2/Zig `ccall` vertical slice
+
+*Tasks:*
+
+. Choose one supported target ABI and one non-retaining, synchronous, read-only
+  function. Do not begin with arbitrary `ccall` conversion.
+. Define one generated ABI manifest: symbol, calling convention, parameter and
+  return types, `sizeof`, `alignof`, field offsets, endianness, alias rules,
+  nullability, pointer extent, error/result values, ownership, and no-retain.
+. Generate target C probes for layout facts. Check Julia `isbits` type facts
+  against those probes and the Idris2 layout proof; never treat the illustrative
+  constants currently in the scaffold as universal target facts.
+. Define the Idris2 lifetime/borrow specification and a checkable ZigProve
+  result showing the pointer is not stored, returned, or used asynchronously.
+. Analyze the lexical `GC.@preserve` region: pointer derivation inside the
+  region; owner preserved through the full `ccall`; no escaping pointer.
+. Prove Julia 1-based to Zig 0-based offset conversion, slice count, empty-range
+  behavior, byte-size overflow, bounds, alignment and alias conditions.
+. Write adversarial ABI integration tests: wrong signature, layout mismatch,
+  index 0, last-index off-by-one, empty buffer, escaped pointer, retained pointer,
+  wrong platform, missing preservation.
+
+*Completion gate:* one target, one helper, one complete independent proof seam.
+All other FFI calls remain rejected. `GC.@preserve` is necessary but never
+presented as sufficient for pointer safety.
+
+=== WP-10 — Strict IEEE and statistical tier boundary
+
+*Tier 3 tasks:*
+
+. Specify strict IEEE-754 operations by format, rounding mode and operation
+  ordering; forbid `@fastmath` in a strict proof unit.
+. Preserve NaN, infinity, signed zero, subnormals, exceptions and fused-operation
+  behavior where in scope. Do not rewrite float terms as reals.
+. Require finite/non-NaN assumptions only when needed and state them at the
+  function boundary. Add rounding-error/residue obligations and certificate
+  format, using QF_FP, Gappa or intervals only where the semantics line up.
+. Test special values, halfway rounding, cancellation, overflow, underflow,
+  signed zero, NaN comparisons and fused-vs-unfused behavior.
+
+*Tier 4 tasks:*
+
+. Define a distinct probabilistic/statistical result type with distribution,
+  assumptions, sample process, confidence level, and runtime/monitor metadata.
+. Keep ML ranking and Axiology policy estimates out of deterministic
+  postcondition proof channels. State explicitly what empirical warrant means.
+
+*Completion gate:* no Float64-to-Real cast without an explicit abstraction
+proof; no Tier 4 status satisfies deterministic functional-safety gates.
+
+=== WP-11 — Warrant, Receipt, cache, and `echidnabot`
+
+*Tasks:*
+
+. Define a canonical proof bundle containing source/contract hashes, normalized
+  IR, Julia/compiler/world and target identity, dependencies, solver requests,
+  witnesses, ABI manifest, assumptions, checker versions, and evidence status.
+. Compute BLAKE3 cache identity over every semantic input; prove invalidation
+  with tests changing each input independently.
+. Local search may emit `INCOMPLETE Warrant` only. Build an independent batch
+  checker for Dedukti witnesses plus configured Coq and Lean checks. Only this
+  path may issue `COMPLETE Receipt`.
+. Store artifacts content-addressed; verify cache content and provenance before
+  use. Pull-request workspaces and cache writes are untrusted.
+. Add a read-only least-privilege bot to report statuses and attach obligation
+  bundles. The bot must distinguish proof status from policy/test/JET status.
+. Test stale witness, forged status string, missing checker, compiler-version
+  mismatch, changed ABI, solver `unknown`, invalid BLAKE3 key, cache poisoning,
+  fork PR permissions and network failure.
+
+*Completion gate:* receipt is independently reproducible; the bot cannot mint
+or upgrade one; every mismatch returns non-green `UNKNOWN`/invalid.
+
+== Release gates and definition of done
+
+A milestone is done only when all applicable checks pass:
+
+[cols="1,3",options="header"]
+|===
+|Gate |Evidence required
+
+|Build and package
+|Clean instantiate/load and `Pkg.test()` on supported floor + current stable;
+  reproducible lock decision; no generated artifacts committed.
+
+|Parser safety
+|No macro execution; parse errors rejected; adversarial macro fixtures; source
+  spans and canonical form tested.
+
+|Compiler boundary
+|Supported Julia matrix; adapter golden tests; unknown IR/call/world facts
+  rejected; dependency/world invalidation regression.
+
+|Semantics
+|Reference semantics and negative/counterexample tests for every operator and
+  control-flow construct admitted.
+
+|Proof
+|Named obligations, checked witnesses, independent checker; no solver-only
+  `unsat` promotion.
+
+|Memory and ABI
+|Target-specific layout probes and mismatch negatives; lifetime, bounds,
+  conversion, no-alias and no-retain obligations independently accounted.
+
+|Numerics
+|Separate tier; boundary/special-value tests; no coercion across arithmetic
+  theories without a proof obligation.
+
+|Documentation
+|README, quickstart, design, plan, and feature status agree with actual code.
+  Every planned/incomplete status remains labeled.
+
+|Security/reproducibility
+|Trusted workflow boundaries, least privilege, complete cache keys, no
+  untrusted receipt/cache acceptance.
+|===
+
+No milestone may waive a failing mandatory gate by changing a status label,
+using `continue-on-error`, hiding an unsupported construct, or broadening a
+precondition without recording it in the function contract and proof bundle.
+
+== First three pull requests to execute
+
+=== PR 1 — Validate the existing package and establish Julia CI
+
+* Run the present code on Julia 1.9 and current stable, fix actual runtime
+  defects, add CLI subprocess tests, and check formatting.
+* Add a focused Julia workflow following the checked-in action-lock convention;
+  regenerate/check its lock as part of the same change.
+* Add the test result and actual tested versions to the implementation status.
+* No semantic feature expansion in this PR.
+
+=== PR 2 — Introduce contract data structures and parser
+
+* Add only data types and pure parser from WP-02; do not generate VCs.
+* Parse `@verified`, `@pre`, `@post`, `@invariant`, `@cap`, `@tier`,
+  `@noalloc`, `@echo` from fixtures and preserve spans.
+* Reject unsupported contract expressions, duplicate annotation, unknown tier,
+  dynamic expressions, unknown macros and malformed syntax.
+* Document exact grammar; add canonicalization and adversarial tests.
+
+=== PR 3 — First specialized typed-IR probe
+
+* Select one pure scalar Julia function with concrete signature and no external
+  dependencies.
+* Write an adapter proof-of-concept for floor and stable Julia. Capture typed
+  return/SSA/call facts and report adapter version; do not claim world freeze
+  until the adapter can evidence it.
+* Validate all nodes/call edges or return `UNSUPPORTED`; add versioned snapshots.
+* Keep result labeled compiler diagnostics; do not send to solver yet.
+
+Only after PR 1–3 are merged and stable should a contributor define the minimal
+internal IR and first scalar VC in PR 4+.
+
+== Task selection and agent handoff protocol
+
+Before starting a task, every contributor/agent should:
+
+. Read README, this plan's mission/principles, the current implementation-plan
+  status, and relevant source/tests.
+. Confirm branch/status and working tree; never overwrite unrelated changes.
+. Select one WP/checklist item and state prerequisites. Do not silently expand
+  scope into a later milestone.
+. Write a failing regression test or fixture first for a bug/feature whenever
+  practical.
+. Implement the smallest change. Keep version-specific code and external
+  integration behind named adapters.
+. Run relevant focused tests, then package/repository checks. Record commands,
+  versions, skipped checks and failures honestly.
+. Update status/docs only to reflect code that exists; separate planned,
+  experimental, tested, and verified labels.
+. Finish with this handoff record in the PR description or issue:
+
+[source,text]
+----
+Work package / task:
+Behavior added or changed:
+Files touched:
+Semantics and assumptions:
+Tests run (exact commands and versions):
+Tests not run and why:
+Proof/trust status (never infer from tests):
+Unsupported cases / residual risks:
+Next unblocked task:
+----
+
+== Risks and decision log to maintain
+
+[cols="1,3,3",options="header"]
+|===
+|Risk |Why it matters |Required mitigation / decision record
+
+|Julia compiler internals drift
+|Private IR and inference details change across Julia minors.
+|Version-specific adapter, golden tests, pinned support matrix, fail closed on
+  unknown nodes; no general use of private fields.
+
+|Method-table/world openness
+|New methods or invalidations can change dispatch after analysis.
+|Bounded snapshot with fingerprints and invalidation policy; do not claim
+  globally frozen dispatch without a real mechanism.
+
+|Unsound lowering
+|An incorrect IR/VC translation can certify a false theorem.
+|Small IR, reference semantics, differential/adversarial tests, checker-verified
+  witnesses, publish TCB.
+
+|Solver proof not checkable
+|Solver status alone may be untrusted or buggy.
+|Require certificate/witness checked independently; `UNKNOWN` otherwise.
+
+|Julia GC/FFI mismatch
+|Preservation, ABI layout and pointer retention are separate properties.
+|Target probes + Idris2 layout/lifetime contracts + Zig proof + Julia-side
+  preserve/bounds/alias checks; one target at a time.
+
+|False zero-allocation claim
+|Compiler/runtime/target changes affect allocations.
+|State exact scope; combine conservative static analysis with contextual runtime
+  regression tests; never promise all targets based on one measurement.
+
+|Feature creep
+|Four tiers and many proof systems create broad integration surface.
+|Prioritize Tier 1 scalar vertical slice; every new feature needs an exit gate
+  and known unsupported set.
+|===
+
+Maintain a dated decision log whenever support matrix, tier semantics, witness
+format, trusted checker, ABI target, cache-key components, or status vocabulary
+changes. Update architecture + tests in the same change; a plan-only edit cannot
+change an implementation claim.
+
+== Navigation
+
+* link:APODEIXIS-VERIFICATION-DESIGN.adoc[Full verification architecture]
+* link:APODEIXIS-MVP-IMPLEMENTATION-PLAN.adoc[Current MVP plan and status]
+* link:../../README.adoc[Project README]

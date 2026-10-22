@@ -1,0 +1,215 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Apodeixis.jl Implementation Plan
+:toc:
+:toclevels: 3
+:sectnums:
+
+== Purpose and current state
+
+This plan turns the architecture in
+link:APODEIXIS-VERIFICATION-DESIGN.adoc[APODEIXIS-VERIFICATION-DESIGN] into
+incremental, reviewable software. It prefers a tiny sound subset and explicit
+`UNSUPPORTED` results over broad but ungrounded claims. For the detailed
+work-package dependency graph and contributor handoff protocol, see the
+link:APODEIXIS-ULTRAPLAN.adoc[Apodeixis Ultra-Plan].
+
+The first source-policy slice now exists:
+
+[cols="1,3",options="header"]
+|===
+|Path |Current responsibility
+
+|`Project.toml`
+|Julia package metadata; JuliaSyntax.jl is the only runtime dependency.
+
+|`src/Apodeixis.jl`
+|Parse source without macro expansion; emit typed policy findings for
+  dynamic escapes, forbidden constructs, unelaborated macros, and `@inbounds`
+  gates. `:policy_clean` means only that this policy pass found no issue.
+
+|`scripts/apodeixis.jl`
+|`audit` command-line wrapper; reports `POLICY CLEAN (NOT VERIFIED)` or
+  rejection, with line and finding code.
+
+|`test/runtests.jl`
+|Parser, policy, mutation-score, unsafe construct, nested boundary, and input
+  validation cases, runnable with `julia --project=. -e 'using Pkg; Pkg.test()'`.
+|===
+
+Runtime validation is still pending because Julia is not installed in the
+current implementation environment. The code must pass `Pkg.test()` in CI
+before this initial slice is considered validated. The repository's existing
+shell `check-no-placeholders` currently reports many pre-existing template
+tokens; it is not evidence about the new implementation.
+
+== 0.1 CLI behavior
+
+[source,bash]
+----
+julia --project=. scripts/apodeixis.jl --help
+julia --project=. scripts/apodeixis.jl audit src/example.jl
+julia --project=. scripts/apodeixis.jl audit --mutation-score 97.5 src/example.jl
+julia --project=. -e 'using Pkg; Pkg.test()'
+----
+
+The audit never calls `include`, `eval`, or macro expansion. It operates on
+JuliaSyntax's parsed `Expr` tree. Passing `--mutation-score 95` only satisfies
+the configured *policy* threshold for an `@inbounds` occurrence; it does not
+establish that the score came from a trusted run, prove bounds, or issue a
+Warrant. A later CLI must replace this manually supplied value with a signed or
+CI-originated test artifact before that gate is used as release evidence.
+
+The initial rule set rejects `@eval`, `@generated`, and `@fastmath` macros;
+`eval` and `invokelatest` calls; unmodeled `ccall`/lowered foreign calls; global
+declarations at file scope or inside functions; unknown macros inside
+`@verified`; and `@inbounds` outside an annotated function or without the
+mutation threshold.
+Any parse failure is rejected. The names
+`@verified`, `@pre`, `@post`, `@invariant`, `@cap`, `@tier`, `@noalloc`, and
+`@echo` are recognized as syntax markers only. No annotation is expanded or
+semantically trusted yet.
+
+== Sequenced implementation work
+
+Use one reviewable PR per slice. Do not merge a downstream proof feature until
+its fail-closed tests and independent evidence boundary are in place.
+
+[cols="1,1,3,3",options="header"]
+|===
+|Slice |State |Implementation tasks |Acceptance gate
+
+|A. Package bootstrap and source policy
+|Code present; Julia tests not yet run
+|Run Julia 1.9+ CI; fix all package and parser API errors; test CLI exit codes;
+  publish findings as stable API; add parser version and source hash to output.
+|`Pkg.test()` green on lowest and newest supported Julia; malicious macro
+  fixture is never evaluated; `POLICY CLEAN` text explicitly remains
+  non-verification.
+
+|B. Contract syntax model
+|Not started
+|Introduce `ContractSpec`, `CapabilitySpec`, and `TierSpec`; recognize only
+  literal, bounded syntax for the seven contract/effect annotations
+  (`@pre`, `@post`, `@invariant`, `@cap`, `@tier`, `@noalloc`, and `@echo`);
+  treat `@verified` as a separate function marker; preserve
+  JuliaSyntax source ranges; reject duplicate, malformed, dynamic, or unknown
+  attributes. Add canonical serialization and golden parser fixtures.
+|Every accepted annotation round-trips deterministically; tests show macro
+  bodies are data and never execute; no assertion is assumed at a call site.
+
+|C. Julia compiler adapter
+|Not started
+|Add a Julia-minor-versioned adapter layer over `code_typed` and narrowly
+  isolated `Core.Compiler` APIs. Capture concrete argument tuple, return type,
+  `CodeInfo`, world bounds if obtainable, call edges, SSA types, and compiler
+  version. Do not couple contract parser to private compiler structs.
+|Golden IR tests run on each declared Julia minor; adapter returns
+  `UNSUPPORTED` on `Any`, dynamic dispatch, unknown intrinsic, unmodeled
+  `invoke`, or absent/stale world data. New methods/dependency hashes invalidate
+  prior analysis.
+
+|D. Closed calls and typed subset
+|Not started
+|Resolve method instances recursively under one captured world; add
+  allowlisted summaries for a handful of pure Base operations; reject open
+  dispatch, reflection, global writes, exceptions not in the model, and
+  unverified callees. Represent CFG/phi nodes in a small stable Apodeixis IR.
+|Negative tests demonstrate no `Any` or unknown edge leaks into an accepted IR;
+  dispatch ambiguity and world mismatch are rejected; summary contracts are
+  independently unit-tested.
+
+|E. Tier 1 scalar proof slice
+|Not started
+|Implement affine expressions and branch conditions; separate integer
+  Presburger constraints from rational LRA; range-lift machine `Int` only with
+  explicit no-overflow VCs. Generate deterministic VCs and route to ECHIDNA's
+  supported Why3/SMT interface only after its request/response schema is fixed.
+|Proof and counterexample fixtures; unsupported nonlinear terms report
+  `UNKNOWN`; replayable witnesses are checked independently. No successful
+  solver status alone is displayed as verified.
+
+|F. Tier 2 and loop/array contracts
+|Not started
+|Lower fixed-width operations to explicit signed/unsigned bitvectors; add
+  checked arithmetic semantics, vector bounds, affine footprints, loop
+  invariants, alias checking, and the first `@inbounds` VC discharge.
+|Exhaustive small-width reference tests; overflow/bounds counterexamples;
+  aliasing SubArray adversarial cases; mutation test evidence recorded by CI;
+  bounds VCs still required regardless of mutation score.
+
+|G. Allocation and JET integration
+|Not started
+|Use JET.jl as a diagnostic reporter, plus a conservative typed-IR/escape
+  analysis for `@noalloc`; add warmed allocation regression tests and report
+  toolchain/target context.
+|Reports are labeled diagnostic/test evidence, never proof. Unknown helper
+  summaries block a static no-allocation claim. Runtime measurement context is
+  in every report.
+
+|H. Idris2/Zig ABI contract
+|Not started
+|Define a generated ABI manifest with symbol, target, calling convention,
+  layout, ownership, lengths, aliasing, and no-retain. Generate C layout probes;
+  verify manifest against Idris2 proofs and ZigProve output; analyze
+  `GC.@preserve` spans and one-based-to-zero-based conversions.
+|Mismatch, pointer escape, unsupported target, or missing no-retain proof
+  rejects the call. Negative integration tests cover each seam obligation;
+  no generic `ccall` is admitted.
+
+|I. IEEE Tier 3 and statistical Tier 4
+|Not started
+|Introduce explicit IEEE IR and rounding/error nodes with `echo-types` residue
+  obligations; route only supported fragments to QF_FP/Gappa/interval checking.
+  Keep probabilistic outputs in a non-deterministic evidence namespace.
+|Adversarial NaN/Inf/signed-zero/rounding tests; no Float-to-real coercion;
+  statistical warrants cannot satisfy deterministic verification gates.
+
+|J. ECHIDNA receipt and `echidnabot`
+|Not started
+|Canonicalize obligations, hash all source/compiler/ABI/solver dependencies
+  with BLAKE3, emit local `INCOMPLETE Warrant`, and batch-check Dedukti
+  witnesses in Coq + Lean before producing a `COMPLETE Receipt`. Add PR bot
+  with untrusted-cache isolation.
+|A receipt is independently reproducible and invalidates on any bound input
+  change. Incomplete, stale, unknown, probabilistic, or untrusted-cache results
+  never become green verification status.
+|===
+
+== Engineering rules for every slice
+
+. *Status is a sum type, not a Boolean.* At minimum use `PROVED`, `REFUTED`,
+  `UNKNOWN`, `UNSUPPORTED`, and `POLICY_REJECTED`. Do not collapse timeouts and
+  unsupported constructs into success.
+. *Keep adapters at the boundary.* JuliaSyntax and `Core.Compiler` data should
+  be translated to an internal normalized IR before checks are implemented.
+  Private compiler APIs live in one versioned module with tests; no private
+  compiler field is read throughout the whole codebase.
+. *Every accepted feature has a negative test.* Test one valid case and
+  adversarial near-misses: malformed contract, changed dispatch, stale world,
+  overflow, alias, wrong ABI, solver unknown, missing proof witness.
+. *Do not overstate tools.* JET, tests, mutation testing, benchmarking, and
+  runtime assertions are diagnostics/evidence. They may gate a proof feature,
+  but do not replace the semantic VC or its checked witness.
+. *Version proof artifacts.* Include Julia version/build, target triple,
+  dependency manifest, method-instance/call graph fingerprints, contract
+  elaborator version, tier semantics, solver/checker versions, and ABI manifest
+  hash in any eventual receipt key.
+. *Minimize trust.* Keep proof-producing search separate from witness checking;
+  run Coq and Lean checking in a trusted batch job. Treat Julia compiler output
+  as an untrusted input to the internal IR validator until its invariants are
+  checked.
+
+== Immediate next actions
+
+. Make Julia 1.9+ available in CI and run the current package suite; fix API or
+  syntax defects before adding semantic features.
+. Expand CLI tests to invoke the executable itself and assert its exit status,
+  rather than testing only `audit_source`.
+. Replace caller-supplied mutation-score trust with an explicit evidence
+  interface; until then use the score only for local policy experimentation.
+. Add stable `AuditReport` serialization and version tags before downstream
+  integrations depend on the API.
+. Implement the `ContractSpec` parser next; do not start solver dispatch until
+  there is a typed contract model and a single accepted scalar example can be
+  traced from source to a named VC.

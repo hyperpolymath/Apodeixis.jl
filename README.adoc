@@ -1,172 +1,88 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 // SPDX-FileCopyrightText: 2024-2026 Jonathan D.A. Jewell (hyperpolymath)
-= {{PROJECT_NAME}}
+= Apodeixis.jl
 :toc:
-:toc-placement: preamble
+:toclevels: 2
 
-// ── Licensing ───────────────────────────────────────────────────────────────
-image:https://img.shields.io/badge/Code-MPL--2.0-blue.svg?logo=mozilla[Code licence: MPL-2.0,link="https://opensource.org/licenses/MPL-2.0"]
-image:https://img.shields.io/badge/Docs-CC--BY--SA--4.0-blue.svg?logo=creativecommons[Docs licence: CC-BY-SA-4.0,link="https://creativecommons.org/licenses/by-sa/4.0/"]
-image:https://img.shields.io/badge/Provenance-Quantum--Safe-blueviolet[Quantum-Safe Provenance,link="docs/legal/EXHIBIT-B-QUANTUM-SAFE.txt"]
-
-// ── Standard & quality gates ────────────────────────────────────────────────
-image:https://img.shields.io/badge/RSR-Rhodium_Standard-9C27B0[Rhodium Standard Repository,link="https://github.com/hyperpolymath/rhodium-standard-repositories"]
-image:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/{{OWNER}}/{{REPO}}/governance-badges/badges/k9.json[K9 conformance,link="https://github.com/{{OWNER}}/{{REPO}}/actions/workflows/dogfood-gate.yml"]
-image:https://www.bestpractices.dev/projects/{{OPENSSF_BP_ID}}/badge[OpenSSF Best Practices,link="https://www.bestpractices.dev/projects/{{OPENSSF_BP_ID}}"]
-image:https://api.scorecard.dev/projects/github.com/{{OWNER}}/{{REPO}}/badge[OpenSSF Scorecard,link="https://scorecard.dev/viewer/?uri=github.com/{{OWNER}}/{{REPO}}"]
-image:https://sonarcloud.io/api/project_badges/measure?project={{OWNER}}_{{REPO}}&metric=alert_status[SonarQube Quality Gate,link="https://sonarcloud.io/summary/new_code?id={{OWNER}}_{{REPO}}"]
-image:https://archive.softwareheritage.org/badge/origin/https://{{FORGE}}/{{OWNER}}/{{REPO}}/[Archived in Software Heritage,link="https://archive.softwareheritage.org/browse/origin/?origin_url=https://{{FORGE}}/{{OWNER}}/{{REPO}}"]
-
-// ── Provenance & ecosystem ──────────────────────────────────────────────────
-image:https://img.shields.io/badge/Idris-Inside-5E5086?logo=idris&logoColor=white[Idris Inside,link="https://github.com/hyperpolymath/proven"]
-image:https://img.shields.io/badge/Zig-Zero--overhead-F7A41D?logo=zig&logoColor=black[Zig Zero-overhead FFI,link="https://github.com/hyperpolymath/typed-wasm"]
-image:https://api.thegreenwebfoundation.org/greencheckimage/{{FORGE}}[Green Web,link="https://www.thegreenwebfoundation.org/green-web-check/?url={{FORGE}}"]
-
-{{PROJECT_DESCRIPTION}}
+Apodeixis.jl is an early-stage Julia verification toolchain project. Its goal is
+to connect Julia source contracts and compiler-specialized code with explicit
+numeric semantics, memory/FFI proofs, and independently checked proof
+certificates. The long-term design targets JuliaSyntax.jl, typed SSA from
+`code_typed` / `Core.Compiler`, and an Idris2 + Zig boundary integrated with
+Why3/SMT, Dedukti, Coq, and Lean.
 
 [IMPORTANT]
 ====
-*This file is a template.* You are reading `README.adoc` from the *RSR template repo*
-(or a freshly-cloned copy of it). Run `just repo-init` to replace every `{{PLACEHOLDER}}`
-token with your project's details, then delete this admonition. Until you do, the
-`{{...}}` markers below are intentional placeholders, not content.
+*Verification status:* the current executable is a source-policy audit, not a
+formal verifier. A `POLICY CLEAN` result does not prove a contract, bounds
+safety, type stability, allocation behavior, ABI correctness, or functional
+safety. The typed-SSA analysis, VC generation, solver integration, and
+Warrant-to-Receipt pipeline are planned work, not implemented features.
 ====
 
-== What this is
+== What exists today
 
-A new repository scaffolded from the *Rhodium Standard Repository (RSR)* template:
-a batteries-included starting point that ships with CI/CD, machine-readable project
-metadata, an AI-agent gatekeeper protocol, a formally-typed ABI/FFI seam
-(Idris2 + Zig), container and reproducible-build scaffolding, and governance
-infrastructure — all wired and passing the RSR validators on day one.
-
-Replace this section with a description of *your* project once initialised.
+* A Julia package using JuliaSyntax.jl to parse source without expanding or
+  executing user macros.
+* A fail-closed policy audit for selected unsafe constructs, unmodeled foreign
+  calls, unknown macros in `@verified` functions, and `@inbounds` placement.
+* A CLI at `scripts/apodeixis.jl` and focused package tests.
+* Architecture and implementation-plan documents describing the intended
+  frontend, numeric tiers, array/FFI seam, proof evidence, and staged roadmap.
+* Idris2 ABI and Zig build scaffolding under `src/interface/`; these are
+  starting points, not yet a complete, target-validated Julia FFI proof seam.
 
 == Quick start
 
+Julia 1.9 or newer is declared in the package compatibility bounds. Runtime
+validation of the package is pending; see the implementation plan.
+
 [source,bash]
 ----
-# 1. Create a repo from this template (or clone it), then from the repo root:
-just repo-init                # interactive bootstrap: fills every {{PLACEHOLDER}}
-
-# 2. See the available tasks:
-just                     # lists all phases (build, test, validate, audit, ...)
-
-# 3. Check the repo still satisfies the RSR shape:
-just validate            # structure + metadata checks
+julia --project=. -e 'using Pkg; Pkg.instantiate()'
+julia --project=. -e 'using Pkg; Pkg.test()'
+julia --project=. scripts/apodeixis.jl --help
+julia --project=. scripts/apodeixis.jl audit path/to/source.jl
 ----
 
-`just repo-init` prompts for the project name, owner, author, licence contact, and the
-other values listed in `.machine_readable/ai/PLACEHOLDERS.adoc`, substitutes them
-across the tree, validates the result, and (if available) runs the `k9-svc` checks.
+For a source file containing `@inbounds`, the initial policy checker also
+requires a mutation-score percentage:
 
-[[ai-install]]
-== AI-Assisted Installation (Recommended)
-
-=== Just say it
-
-Say this to any AI assistant that can read a URL and run commands (or give you
-commands to paste):
-
-[source,text]
+[source,bash]
 ----
-Create a new repository from https://github.com/hyperpolymath/rsr-template-repo
+julia --project=. scripts/apodeixis.jl audit --mutation-score 97.5 path/to/source.jl
 ----
 
-The URL is the key: it leads the assistant to
-link:docs/AI_INSTALLATION_GUIDE.adoc[`docs/AI_INSTALLATION_GUIDE.adoc`], the
-complete step-by-step recipe. The assistant checks your system, installs the
-prerequisites, instantiates the template with `just repo-init`, and verifies the
-result with `just doctor`.
+This caller-supplied percentage currently satisfies only a policy gate. It is
+not authenticated test evidence and does not discharge a bounds verification
+condition. `@inbounds` remains unverified until the planned typed-SSA and VC
+passes exist.
 
-* "Set up rsr-template-repo so I can work on the template itself — https://github.com/hyperpolymath/rsr-template-repo"
-* `./launcher.sh --ai-setup` (or `just ai-setup`) prints the line and the guide path.
+== Design and implementation
 
-=== What you will be asked
+* link:docs/architecture/APODEIXIS-VERIFICATION-DESIGN.adoc[Verification architecture] — hybrid frontend, four numeric tiers, memory discipline, FFI seam, worked example, and proof lifecycle.
+* link:docs/architecture/APODEIXIS-MVP-IMPLEMENTATION-PLAN.adoc[MVP implementation plan] — existing package slice, ordered implementation work, and acceptance gates.
+* link:docs/architecture/APODEIXIS-ULTRAPLAN.adoc[Ultra-plan] — dependency-ordered work packages, acceptance gates, risks, and contributor handoff protocol.
+* link:src/interface/Abi/README.adoc[ABI interface scaffolding] — current Idris2 ABI files and their limitations.
 
-. Your operating system (Linux, macOS, or Windows via WSL2).
-. The new project's name, owner, author and licence contact (the values listed in
-  `.machine_readable/ai/PLACEHOLDERS.adoc`).
-. To confirm the privacy notice below.
+The numeric design keeps mathematical integers/rationals, fixed-width
+bitvectors, strict IEEE-754 values, and probabilistic evidence separate.
+Statistical warrants are never treated as deterministic functional-safety
+proofs. Full details and unsupported boundaries are recorded in the design
+document.
 
-=== Privacy and security
+== Development status
 
-[IMPORTANT]
-====
-Setting up rsr-template-repo clones this repository and installs its developer
-tools per-user with mise (no administrator rights, nothing sent anywhere).
-`just repo-init` rewrites files only inside the new checkout; it creates no
-remote repository and pushes nothing until you do.
-====
+This is research-stage software with an intentionally narrow first slice. Julia
+package tests have been added but must be run in a Julia-enabled environment
+before the package is treated as runtime-validated. Each implementation phase
+must add adversarial negative tests and preserve explicit `UNKNOWN` /
+`UNSUPPORTED` outcomes; tests, JET reports, mutation scores, and benchmarks are
+evidence and gates, not formal proofs.
 
-=== Minting without a terminal
+== License
 
-Agents and CI can mint non-interactively: set `RSR_NON_INTERACTIVE=1` and pass
-the answers as environment variables named like the prompts' variables in
-`build/just/repo-init.just` (`PROJECT_NAME`, `REPO`, `OWNER`, `AUTHOR` and
-`AUTHOR_EMAIL` are required; any other answer left unset is blank or takes its
-default). Piping the answers to stdin in prompt order also works.
-
-=== Troubleshooting
-
-Run `just doctor`; each FAIL carries a code explained in
-link:docs/SETUP.adoc#troubleshooting[`docs/SETUP.adoc` §Troubleshooting], and
-`just heal` applies the automatic fixes. Prefer to do it yourself? The full
-manual route is link:docs/SETUP.adoc[`docs/SETUP.adoc`]; developers and
-maintainers can brief an AI with `just ai-warmup dev` / `just ai-warmup maintainer`.
-
-== What you get
-
-* *Machine-readable metadata* (`.machine_readable/descriptiles/`) — `STATE`, `META`,
-  `ECOSYSTEM`, `PLAYBOOK`, `AGENTIC`, `NEUROSYM`, `CLADE`, and `anchors/ANCHOR`,
-  in deed, so tools and agents can read the project's state and boundaries.
-* *AI gatekeeper protocol* — `rsr-template-repo_chora.deed` (the repo deed) is the
-  universal entry point that tells an AI agent how to work in this repo before it
-  touches anything; it carries the AI allocation policy and the ply directory tree.
-* *Typed ABI/FFI seam* — `src/interface/Abi/` (Idris2 type + layout proofs) over
-  `src/interface/ffi/` (Zig implementation), with generated C headers.
-* *CI/CD* — GitHub Actions for quality, security (CodeQL, Scorecard, secret
-  scanning), multi-forge mirroring, and RSR anti-pattern enforcement.
-* *Supply-chain & reproducibility* — container layering (stapeln), Guix shells,
-  SBOM, and signing hooks.
-* *Governance* — `GOVERNANCE.adoc`, `MAINTAINERS.adoc`, `.github/` community health
-  files, and a release `AUDIT.adoc` gate.
-
-== Repository map
-
-The authoritative map is generated, so it cannot drift from the tree:
-link:docs/architecture/REPOSITORY-MAP.adoc[docs/architecture/REPOSITORY-MAP.adoc]
-(regenerate with `just repo-map`; CI fails if it is stale).
-
-The short version:
-
-[cols="1,3"]
-|===
-| Path | What lives there
-
-| `README.adoc`, `CLAUDE.md` | Start here - humans and AI agents respectively.
-| `src/`, `tests/`           | The code and its tests.
-| `docs/`                    | Human documentation, including the full map above.
-| `.machine_readable/`        | Manifests, contractiles and policies that tools read.
-| `build/`, `Justfile`       | Every task runs through `just`; phases live in `build/just/`.
-| `ci/`, `.github/`          | CI configuration; GitHub reads `.github/` and no other path.
-|===
-
-== Where to go next
-
-* link:docs/architecture/REPOSITORY-MAP.adoc[The repository map] — generated; what every directory is for.
-* link:docs/EXPLAINME.adoc[EXPLAINME] — the engineering deep-dive: how the pieces actually work.
-* link:docs/AFFIRMATION.adoc[AFFIRMATION] — the dated, signed honesty snapshot of the repo's true state.
-* link:docs/AUDIT.adoc[AUDIT] — the release audit gate.
-* link:docs/AI_INSTALLATION_GUIDE.adoc[AI installation guide] — for agents instantiating this template.
-* link:.machine_readable/ai/PLACEHOLDERS.adoc[PLACEHOLDERS] — the full placeholder reference.
-
-== Licence
-
-Code, configuration and scripts are link:LICENSE[Mozilla Public License 2.0]
-(`MPL-2.0`); prose documentation is `CC-BY-SA-4.0`. Both texts live in
-`LICENSES/`, and per-file `SPDX-License-Identifier` headers are authoritative.
-The GitHub-detected licence is MPL-2.0 (the root `LICENSE`). Long-term
-attribution uses Quantum-Safe Provenance — see
-link:docs/legal/EXHIBIT-B-QUANTUM-SAFE.txt[the Quantum-Safe Provenance exhibit].
+Code and configuration are licensed under MPL-2.0. Documentation is licensed
+under CC-BY-SA-4.0. See link:LICENSE[LICENSE] and the texts under
+link:LICENSES/[LICENSES/].

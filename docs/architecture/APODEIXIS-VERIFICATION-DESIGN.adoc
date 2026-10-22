@@ -1,0 +1,613 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Apodeixis.jl: Verification Architecture and MVP Design
+:toc:
+:toclevels: 3
+:sectnums:
+
+== Status and scope
+
+This document is the technical design for Apodeixis.jl. The checkout supplies
+the repository, Idris2 ABI, and Zig scaffolding, plus an initial Julia package
+and source-policy CLI added as the first implementation slice. It does *not* yet
+implement compiler-IR analysis, VC generation, solver integration, or receipts.
+The design makes that boundary explicit: `POLICY CLEAN` is not proof; a result
+is *proved* only when the verifier emits a checkable obligation/certificate and
+the configured trusted checker accepts it. Tests, JET reports, mutation scores,
+and statistical evidence are valuable gates, but are not substitutes for proof.
+
+=== Implementation status (0.1.0 bootstrap)
+
+Implemented in the current tree: a Julia package (`Project.toml`,
+`src/Apodeixis.jl`) using JuliaSyntax.jl to parse source without evaluating
+macros; a fail-closed source policy audit for forbidden dynamic escapes,
+`@inbounds` context plus the 95% mutation-score gate, unsupported `ccall`, and
+unelaborated macros inside `@verified`; a CLI at `scripts/apodeixis.jl`; and focused
+`Pkg.test()` cases. This is a *policy linter*, not a contract prover. The Julia
+runtime is not installed in the current development environment, so the package
+tests have not yet been executed here; the first implementation CI job should
+run them on the declared Julia compatibility matrix before treating the slice
+as runtime-validated.
+
+Not implemented: contract elaboration/VC semantics, typed SSA inspection,
+monomorphized call-graph closure, world-age fingerprinting, numeric-tier
+checking, alias proofs, allocation proof, ABI manifest validation, solver
+witnesses, ECHIDNA transport, or Warrant/Receipt issuance. The current
+`AuditReport` returns only `:policy_clean` or `:rejected`; neither status
+establishes these capabilities. `UNSUPPORTED` describes the future verifier's
+behavior for these unimplemented features.
+
+Apodeixis is a source-to-obligation compiler for a deliberately restricted,
+closed Julia program. It is not a theorem prover for arbitrary Julia. A verified
+unit has a declared input domain, contract, effect/capability footprint,
+numeric tier, dependency world, and proof status. Unsupported syntax, unknown
+calls, unresolved dispatch, stale dependencies, or solver `unknown` cause a
+reject/unknown result; they never silently weaken the claim.
+
+== Architecture at a glance
+
+[source,text]
+----
+ Julia source
+     |
+     +--> JuliaSyntax.jl surface pass: macros, syntax policy, source spans
+     |         -> normalized contract/effect AST (not executable macro expansion)
+     |
+     +--> Julia compiler: method instance + typed SSA IR, pinned Julia version
+               -> closed call graph, dataflow/effect/alias/alloc checks
+               -> typed Apodeixis IR (ANF, explicit overflow/rounding/memory)
+                         |
+             VC generation and dependency hashing
+                         |
+          +--------------+-----------------------+
+          |              |                       |
+       SMT/Why3     Agda/Idris/Zig seam     JET + runtime test evidence
+          |              |                       |
+  Strict Dedukti witness + checked batch Receipt  diagnostics only
+                         |
+          +--> Warrant (INCOMPLETE) --> external batch Coq/Lean check
+                                          -> Receipt (COMPLETE)
+                                          -> BLAKE3-keyed Proof Burrower cache
+----
+
+=== Compiler boundary and trust model
+
+* *JuliaSyntax.jl* is the source-facing parser, syntax tree, macro-contract
+  recognizer, and source-span provider. It parses `@pre`, `@post`, `@invariant`,
+  `@cap`, `@tier`, and `@noalloc` declarations without executing arbitrary
+  macro expansion. Contract expressions are parsed into a small allowlisted
+  logic (comparisons, Boolean connectives, affine arithmetic, array indexing,
+  and approved predicates). A macro whose expansion would be required for
+  semantics is rejected unless registered with a reviewed, versioned
+  elaborator. This prevents `eval` or a malicious macro from becoming part of
+  the proof frontend.
+* *Julia's compiler* supplies the concrete dispatch instance and typed SSA IR.
+  The adapter uses public introspection such as `code_typed`/`Base.return_types`
+  where possible, and a narrowly isolated `Core.Compiler` adapter where exact
+  `CodeInfo`, `MethodInstance`, call-edge, or world information is needed. Those
+  internals are version-specific: every supported Julia minor gets its own
+  adapter and golden IR tests. The verifier does not patch the compiler, alter
+  inferred IR, or assume a private field is stable.
+* Each entry point is specialized over concrete argument types and a captured
+  Julia world. Recursively resolve every reachable call at that world. Require
+  one applicable `MethodInstance` for each call edge (or an explicitly
+  modeled finite dispatch split), and fail closed on `Any`, `invoke`, dynamic
+  `apply`, `invokelatest`, reflection, unresolved `ccall`, or a call into an
+  unverified package method. World-age freezing is a *reproducibility and
+  closed-world* condition, not a promise that Julia cannot load new methods:
+  record the world interval and dependency method fingerprints, reject
+  invalidation/newer methods that can change the graph, and re-verify when the
+  package image or dependency set changes.
+* SSA checks reject `Any`-typed values at proof-relevant operations and reject
+  boxed/dynamic calls on the verified path. This is distinct from proving
+  allocation freedom: boxing analysis, inferred IR, LLVM/native code checks,
+  and runtime allocation tests are separate checks. `JET.jl` is an excellent
+  diagnostic and CI signal, but its absence of reports is not a soundness
+  theorem. The MVP certifies only a conservative typed-SSA subset and records
+  the Julia version, target triple, flags, method hashes, and dependency lock.
+
+The semantic translation is explicit: SSA control flow becomes a CFG with
+phi-nodes; checked arithmetic becomes a value plus overflow condition; array
+operations become bounds and alias obligations; floating-point operations
+retain IEEE operations and rounding nodes; and calls become either inlined
+verified summaries or separately proven contracts. No optimization is allowed
+to erase distinctions in the selected numeric tier.
+
+=== Surface contract semantics
+
+Contract macros are declarations, not arbitrary Julia code hooks. A normalized
+contract bundle is attached to the function's source identity and specialized
+method instance. Preconditions are assumptions only at a verified call site
+where their proof is discharged. Postconditions and invariants are goals.
+Runtime contract checks can be emitted in debug mode but do not upgrade a
+static proof status. `@cap` declares an upper bound on effects; inferred effects
+must be a subset. Capabilities include heap reads/writes by region, IO, random
+state, task/world mutation, and foreign calls. `eval`, `@generated`,
+`Base.invokelatest`, global mutable state, and unverified `ccall` are forbidden
+in the MPR-style safe footprint.
+
+Example surface shape (illustrative API; macro implementation is part of the
+MVP):
+
+[source,julia]
+----
+@verified function row_bound!(out::Vector{Int64}, row::Vector{Int64},
+                               incumbent::Int64)
+    @pre length(out) == length(row)
+    @pre all(x -> x >= 0, row)
+    @post length(out) == length(row)
+    @cap(read(row), write(out), foreign(:apx_max_scan))
+    @tier MachineBV
+    @noalloc
+    # body follows below
+end
+----
+
+== Four numeric and decidability tiers
+
+A tier is part of a function's proof interface. Calls may move to a *more
+restricted* tier only with explicit conversion obligations; they may not
+silently reinterpret values. In particular, mathematical real numbers and
+`Float64` are different domains in both the IR and certificates.
+
+[cols="1,1,2,3",options="header"]
+|===
+|Tier | Domain / encoding | Decidable fragment / obligations | Claim and boundaries
+
+|`ExactLinear`
+|Mathematical integers and rationals. Julia `Rational{T}` may be admitted when
+  canonical and non-overflowing; arbitrary mathematical integers are represented
+  by `BigInt` or a proved-safe lift.
+|Linear integer arithmetic (Presburger arithmetic) and linear rational
+  arithmetic (LRA). The two theories are not conflated. Addition, negation,
+  order, linear constraints, and affine branch bounds are supported. Nonlinear
+  products, division with variable denominator, and unsupported floor/mod
+  produce unknown or a different tier.
+|For a machine `Int`, an additional no-overflow proof is mandatory before
+  interpreting it as a mathematical integer. Otherwise Julia `Int` is fixed
+  width and belongs to `MachineBV`. Supports exact skip/branch-and-bound
+  warrants, e.g. a RapidNJ row lower bound proves no candidate can improve the
+  incumbent.
+
+|`MachineBV`
+|Fixed-width `Int8`…`Int128`, `UInt*`, and pointer-sized `Int`/`UInt`, with
+  explicit width and signedness.
+|QF_BV; distinguish Julia wrapping operations from checked operations, checked
+  intrinsics, and `Base.Checked` semantics. Shifts, signed comparisons,
+  widening/narrowing, and reinterpretation are explicit BV operators.
+|The proof states whether wraparound is intended. No appeal to unbounded
+  integer arithmetic is permitted without range obligations at every operation.
+
+|`StrictIEEE754`
+|IEEE-754 `Float32` / `Float64` with exact format, rounding mode, and operation
+  sequence. `@fastmath` is rejected.
+|QF_FP where supported; otherwise Gappa/interval certificates with directed
+  rounding. Preconditions prove operands/results are finite and non-NaN when
+  required. Rounding is modeled per operation, not by replacing floats with
+  reals. An `echo-types` residue/error bound is mandatory for every lossy result.
+|NaN, signed zero, infinities, subnormals, exceptions, and fused operations are
+  specified explicitly. A real-arithmetic theorem is not a Float64 theorem.
+  Interval proof fallback may return unknown rather than silently assume a
+  solver's unsupported semantics.
+
+|`Probabilistic/Statistical`
+|Random variables, distributions, sampled observations, learned rankings,
+  or statistical model outputs.
+|Statistical tests, concentration bounds, calibration, runtime monitors, or
+  probabilistic proof systems with explicit assumptions and confidence levels.
+|Produces a runtime/statistical `Warrant` only. It is hard-banned from claiming
+  deterministic functional safety, memory safety, or a universal postcondition.
+  `Axiology.jl` policy constraints and ML ranking can contribute evidence, but
+  cannot discharge Tier 1–3 safety VCs.
+|===
+
+`@echo(safe)` is restricted to exact `Int` operations with established range
+bounds and exact rationals. `@echo(neutral)` records a bounded-residue float
+conversion/truncation, with units, input domain, rounding mode, and a proved
+residue bound. `@echo(breaking)` records irreversible loss and cannot flow into
+a safety-critical postcondition unless an explicit, separately proved
+abstraction justifies it. These annotations refine a tier; they do not change
+the underlying arithmetic theory.
+
+A proof certificate includes theory, format, rounding mode, overflow mode,
+solver/version, assumptions, and exact operation graph. Solver `sat` for the
+negated goal is a counterexample; `unsat` is only a proof ingredient accepted
+when the checker validates its witness. `unknown`, timeout, unsupported theory,
+or missing residue bound means no proof.
+
+== Mutation, arrays, allocation, and capabilities
+
+=== Array and view discipline
+
+The MVP adopts a conservative separation-logic-like footprint model:
+
+* An input has a read borrow; a mutating argument has a unique write borrow for
+  the duration of the call. Simultaneous mutable borrows must have a statically
+  proved disjoint region. `Vector{T}` regions are object identity plus a
+  half-open index interval. `SubArray` footprints are derived from parent
+  identity, axes, strides, and index mapping; unknown/indirect index sets are
+  rejected unless a runtime disjointness guard is inserted and its branch
+  separately verified.
+* If `A` and `B` may share a parent or backing storage, mutation through one and
+  observation/mutation through the other is rejected unless the declared
+  footprints are disjoint. `===` on wrappers is insufficient to prove backing
+  storage disjointness. `copy` creates a separate region but is incompatible
+  with `@noalloc` unless allocation is outside the measured kernel.
+* Loop invariants state initialized prefix/suffix, bounds, and preservation of
+  elements outside the write footprint. Mutation cannot invalidate an active
+  read borrow. Global arrays and unmodeled `unsafe_load`/`unsafe_store!` are not
+  in the safe subset.
+
+=== `@inbounds` policy
+
+`@inbounds` is permitted *only* in an `@verified` function after the verifier
+has generated and discharged bounds VCs for every affected access (including
+loop preconditions and index arithmetic). It is rejected for unchecked or
+unknown paths. In addition, the project policy requested for this toolchain
+requires the covering `mutation.rs` mutation-testing score to be at least 95%
+before a function containing `@inbounds` can pass the release/CI gate. The
+score is computed from the relevant safety test suite, with surviving mutants
+reviewed and excluded mutants documented. Mutation score is a test-strength
+gate, not a proof rule: 95% cannot make an undischarged bounds VC acceptable.
+
+=== `@noalloc` policy
+
+`@noalloc` is checked on the specialized hot path, not inferred from source
+appearance. Reject escaping closures, boxing, heap construction, dynamic
+dispatch, growth operations, and helper calls without allocation summaries.
+Use typed SSA / compiler allocation analysis as a conservative static filter,
+then validate with warmed-up allocation tests (`@allocated` or BenchmarkTools)
+on supported Julia versions. Record compiler version, target, compilation state,
+and measurement method. A runtime zero-allocation result is regression evidence,
+not a universal proof across targets. No allocation claim is made for compilation,
+exceptional exits, or unmodeled runtime services unless explicitly covered.
+
+== Idris2 + Zig `ccall` memory-safety proof seam
+
+Foreign calls are opaque unless tied to a versioned ABI manifest and verified
+Idris2 specification plus Zig implementation. Each entry declares exact symbol,
+calling convention, target ABI, parameter widths, pointer mutability, lengths,
+nullability, alignment, alias relation, ownership/lifetime, error codes, and
+retention policy. The seam checker establishes four independent obligations:
+
+. *Preservation and lifetime:* the Julia owner remains strongly reachable for
+  the full dynamic extent of the foreign call. `GC.@preserve` encloses every
+  pointer derivation and the `ccall`; no pointer escapes the region. Pointer
+  conversion before entering the preserve block is rejected by the source
+  checker. A borrowed pointer is invalid after return unless ownership is
+  explicitly transferred under a separately verified allocator protocol.
+. *Layout:* only `isbits` Julia values cross by value. For each `isbits`
+  `struct`, compare compiler-reported size, alignment, field offsets, field
+  sizes, signedness, and endian assumptions against the generated C ABI
+  manifest and the Idris2 `Layout` proof. The build runs target-specific
+  `sizeof`/`alignof`/`offsetof` probes; Idris2 proofs validate the manifest
+  arithmetic. A mismatch is a hard error. The template `Layout.idr` example is
+  not a universal platform layout proof; target facts must be generated and
+  checked for each supported triple.
+. *Index and slice conversion:* Julia arrays are 1-based, while the Zig slice
+  contract is 0-based with a pointer plus element count. For Julia inclusive
+  interval `lo:hi`, prove `1 <= lo <= hi <= length(A)` (or handle the empty
+  case separately), then pass offset `lo - 1` and length `hi - lo + 1` using a
+  checked unsigned conversion. Prove multiplication by element size and pointer
+  offset cannot overflow, and prove alignment and bounds against the actual
+  array length. Do not pass Julia's `pointer(A)` for an empty range without a
+  separately specified empty-slice convention.
+. *No retention:* Zig's verified function is specified to use the borrowed
+  pointer only during the call and not retain it, store it globally, spawn an
+  asynchronous use, or return it. Idris2 carries the borrowed lifetime in the
+  function type/specification; ZigProve checks the implementation against that
+  contract. A C ABI alone cannot encode non-retention, so this obligation is
+  proved by the Zig verification and exposed as a named trust boundary in the
+  manifest.
+
+`GC.@preserve` proves reachability/liveness only; it does not by itself prove
+bounds, aliasing, alignment, layout, or Zig non-retention. Those are separate
+VCs. Similarly, Zig proofs do not prove Julia's `ccall` declaration matches the
+symbol unless the generated ABI manifest is checked against both sides.
+
+=== Example ABI declaration
+
+Illustrative Idris2 specification for the scanner's primitive operation (the
+actual Idris syntax/package API should track the repository's Idris2 version):
+
+[source,idris]
+----
+%default total
+
+||| Borrowed slice is valid only for this call; implementation retains no pointer.
+public export
+record SliceSpec where
+  constructor MkSliceSpec
+  base : Bits64
+  offset : Bits64
+  count : Bits64
+  (0 nonNull : So (base /= 0))
+  (0 positiveCount : So (count > 0))
+  (0 inBounds : offset + count <= maxElements)
+
+public export
+maxScan : SliceSpec -> Int64 -> Int64
+-- Postcondition in the interface package:
+-- result == maximum of exactly [base + offset, count] elements,
+-- count > 0; reads only; no pointer survives return.
+----
+
+The production ABI package must additionally prove that the types are
+platform-correct; the sketch above communicates the logical contract, not a
+portable pointer representation.
+
+== Worked end-to-end kernel: row bound scanner
+
+This example scans a nonnegative Int64 row and writes suffix lower bounds. It
+uses a verified Zig helper to compute the row maximum, then Julia writes a
+suffix accumulation combined with that maximum: each output is the maximum of
+the suffix sum and the row maximum. `Int64` arithmetic is Tier 2: every add is
+checked, not assumed mathematical. To keep the example readable, the shown
+pseudocode helper `checked_add` returns `(value, ok)` and has a verified summary. Macro names are
+proposed surface syntax. The caller supplies non-overlapping buffers; the
+verifier establishes their full-array disjointness, not merely distinct Julia
+wrapper objects.
+
+[source,julia]
+----
+# Assumed generated wrapper from the Idris2/Zig ABI package:
+# apx_max_scan(ptr::Ptr{Int64}, n::Csize_t) -> Int64
+# Its manifest asserts read-only, no-retain, no-throw C ABI semantics.
+
+@verified function suffix_bounds!(out::Vector{Int64}, row::Vector{Int64})
+    @pre length(out) == length(row)
+    @pre !mayalias(out, row)
+    @pre all(x -> x >= 0, row)
+    # Mathematical (unbounded) sum in the contract logic; prevents overflow
+    # for every suffix, without allocating in the verified kernel.
+    @pre sum_wide(row) <= typemax(Int64)
+    @post length(out) == length(row)
+    @post all(i -> 1 <= i <= length(out) ==> out[i] >= 0,
+              1:length(out))
+    @cap(read(row), write(out), foreign(:apx_max_scan))
+    @tier MachineBV
+    @noalloc
+
+    n = length(row)
+    if n == 0
+        return out
+    end
+
+    m::Int64 = 0
+    GC.@preserve row begin
+        p = pointer(row, 1)  # pointer derived inside preserve region
+        m = ccall((:apx_max_scan, libapodeixis), Int64,
+                  (Ptr{Int64}, Csize_t), p, Csize_t(n))
+    end
+
+    # Reverse suffix accumulation; no new arrays and no unchecked arithmetic.
+    acc::Int64 = 0
+    @inbounds for i in n:-1:1
+        @invariant acc == sum_wide(row[i+1:n])
+        @invariant m == max_wide(row)
+        s, ok = checked_add(acc, row[i])
+        ok || return out  # defensive fallback; precondition proves unreachable
+        acc = s
+        out[i] = max(acc, m)
+    end
+    return out
+end
+----
+
+The `sum_wide` and `max_wide` names are logical specifications, not Julia
+runtime helpers. The sum precondition makes every nonnegative suffix fit in
+`Int64`; the checked-add failure branch is retained as a defensive runtime
+fallback but is proved unreachable on the verified entry path. The loop
+invariant ties `acc` to the mathematical suffix sum, while `m` from Zig is
+checked against the helper's verified maximum specification and combined with
+`acc` in each output value. A production API may instead return an explicit
+status and state initialized-output guarantees for a reachable failure path.
+
+=== Generated VCs and evidence
+
+The verifier lowers the function and emits obligations similar to these
+(numbering is illustrative and stable IDs are derived from source + IR hashes):
+
+[cols="1,2,2",options="header"]
+|===
+|VC | Goal / assumptions | Discharge path
+
+|`PRE-01` shape
+|`length(out) == length(row)` at entry.
+|Caller contract; otherwise caller VC fails.
+
+|`ALIAS-01` separation
+|`region(out) ∩ region(row) = ∅` during writes.
+|Ownership/borrow proof or explicit runtime guard with verified branch.
+
+|`FFI-PRESERVE-01`
+|The owner of `row` remains live from pointer derivation through return from
+  `apx_max_scan`; pointer use is within `GC.@preserve`.
+|JuliaSyntax source-span rule plus SSA lifetime analysis.
+
+|`FFI-ABI-01`
+|Julia `(Ptr{Int64}, Csize_t) -> Int64` agrees with target C ABI and Idris2
+  symbol declaration, sizes, alignment, and calling convention.
+|Generated ABI probes + Idris2 layout proof + Zig exported signature.
+
+|`FFI-BOUNDS-01`
+|For `n > 0`, pointer to Julia index 1 and count `n` covers exactly the array;
+  byte-size and pointer-offset arithmetic do not overflow.
+|Julia array facts + checked arithmetic + seam manifest.
+
+|`FFI-NORETAIN-01`
+|Zig does not save, return, or asynchronously use the borrowed Julia pointer.
+|ZigProve proof checked against Idris2 lifetime specification.
+
+|`LOOP-01` invariant
+|At loop head, `acc` is the checked sum of the processed suffix and all written
+  cells contain the maximum of their suffix sum and the row maximum, hence are
+  initialized and nonnegative.
+|Induction over reverse loop; Tier 2 QF_BV obligations.
+
+|`BOUNDS-01`
+|Every `row[i]` and `out[i]` access has `1 <= i <= n`.
+|Induction from loop range; must pass before `@inbounds` is accepted.
+
+|`OVERFLOW-01`
+|Each `checked_add` reports success iff the mathematical sum fits Int64; on the
+  success branch the result is the exact BV addition with no overflow.
+|QF_BV + checked-add summary.
+
+|`ALLOC-01`
+|No heap allocation/boxing/dynamic dispatch on the specialized normal path.
+|Typed SSA effect/escape analysis + warmed allocation regression test.
+
+|`POST-01` postcondition
+|For successful return, all stated output values satisfy the contract.
+|Composition of loop invariant, checked arithmetic, and helper summary.
+|===
+
+`@inbounds` is not admitted until `BOUNDS-01` and all related bounds VCs are
+proved and the relevant `mutation.rs` score is at least 95%. If the implementation
+returns early on overflow, `POST-01` must be guarded by the success result or
+state the weaker failure postcondition explicitly; the simplified example
+intentionally exposes this API-design decision rather than hiding it.
+
+=== Warrant to Receipt lifecycle
+
+. The frontend stores a canonical normalized AST, specialized typed SSA
+  fingerprint, Julia version/world, ABI manifest hash, source map, assumptions,
+  and test/mutation evidence. It generates VCs and a deterministic BLAKE3
+  dependency key.
+. ECHIDNA sends supported obligations to Why3/SMT. A successful local run
+  creates a *Warrant* marked `INCOMPLETE`; this is evidence that proof search
+  succeeded, not a completed verification claim.
+. Strict Dedukti `.dk` witnesses are emitted for the accepted proof steps. The
+  batch checker independently checks the witnesses in Coq and Lean. Any missing,
+  stale, inconsistent, or rejected witness prevents completion.
+. On complete checking, ECHIDNA issues a *Receipt* marked `COMPLETE`, bound to
+  the exact BLAKE3 key. Proof Burrower may cache that receipt. Any source,
+  compiler version, world fingerprint, target ABI, contract, solver configuration,
+  or dependency change invalidates the key and requires re-checking.
+. `Probabilistic/Statistical` obligations are labeled statistical warrants and
+  are never promoted to deterministic receipts for functional safety claims.
+
+Reports distinguish `PROVED`, `REFUTED` (counterexample), `UNKNOWN`, and
+`UNSUPPORTED`. Only `PROVED` with a valid `COMPLETE` receipt satisfies a strict
+verification gate.
+
+== Integration and developer workflow
+
+=== Julia package and test model
+
+The eventual package should be a normal Julia package with `Project.toml`,
+`src/Apodeixis.jl`, and tests run by `Pkg.test()`. Pin compatible JuliaSyntax.jl,
+JET.jl, and solver/client versions in the project/manifest; compiler internals
+are gated by an explicit Julia compatibility matrix. Tests include parser golden
+fixtures, typed-SSA fixtures, soundness regressions for dispatch/world changes,
+unit tests for each VC lowering rule, ABI layout probes, FFI integration tests,
+and end-to-end certificate checks. Test helpers must not be mistaken for
+verified library code.
+
+Suggested developer loop:
+
+[source,bash]
+----
+julia --project -e 'using Pkg; Pkg.test()'
+julia --project -e 'using JET; @report_opt target(args...)'
+apodeixis check --tier MachineBV --receipt target(args...)
+apodeixis explain --vc FFI-PRESERVE-01
+----
+
+JET reports are triage: every report is fixed or explicitly classified, but a
+clean JET report alone does not prove the call graph closed or safe. `Pkg.test`
+validates implementation behavior; SMT and certificate checking validate
+formal obligations. CI keeps these statuses separate.
+
+=== `echidnabot`
+
+`echidnabot` runs on PRs with least-privilege permissions. It parses changed
+Julia files, checks macro allowlists and policy, discovers annotated entry
+points, runs parser/type/alias/VC checks, requests local ECHIDNA proof search,
+and uploads reproducible obligation bundles. It comments with per-tier status,
+VC IDs, counterexample/reason for unknown, compiler + dependency fingerprints,
+mutation score, JET/test results, and receipt hash. It must not publish a
+`COMPLETE` badge from local `INCOMPLETE Warrant` output. Receipt verification
+runs in a separate trusted batch job; untrusted PR code cannot mint or alter
+trusted receipts. Cache keys are content-addressed and include toolchain and
+proof-checker versions; untrusted cache entries are never accepted as verified
+receipts.
+
+== MVP roadmap
+
+[cols="1,2,3,2",options="header"]
+|===
+|Phase |Deliverable |Exit criteria |Explicit non-goals
+
+|0. Foundations
+|Julia package skeleton; supported-version policy; JuliaSyntax contract
+  parser; typed SSA adapter; diagnostic format and trust-boundary register.
+|CI parses fixtures on every supported Julia minor; rejects `Any`, unknown
+  dispatch, forbidden syntax, and stale world/dependency fingerprints; golden
+  IR tests detect compiler drift.
+|No whole-language Julia support, no claims based on JET alone.
+
+|1. Exact core
+|Pure scalar subset; pre/post/invariant; closed calls; Tier 1 linear integers
+  and rationals; Why3/SMT VC generation and checked witness pipeline.
+|Soundness tests for affine arithmetic/branches; counterexample tests; accepted
+  certificates independently check; unsupported nonlinear terms fail closed.
+|No arrays, floating point, or foreign calls.
+
+|2. Machine arithmetic + arrays
+|Tier 2 QF_BV; owned `Vector{T}` and affine loops; interval footprints, alias
+  checks, loop invariants, `@inbounds` gate, `@noalloc` diagnostics.
+|Overflow/bounds/alias regression suite; all accepted unsafe accesses have
+  proven bounds VCs; mutation score gate at 95%; no unknown call on proof path.
+|No arbitrary SubArray indexing or concurrent mutation.
+
+|3. Verified FFI seam
+|Generated target ABI manifest; Julia preservation and lifetime analysis;
+  Idris2 layout and function contract; ZigProve-backed no-retain proof.
+|Cross-check size/alignment/offset/signature on every target; negative tests
+  for escaped pointers, wrong index conversion, ABI mismatch, and pointer
+  retention; one end-to-end `ccall` receipt.
+|No arbitrary third-party `ccall`, callbacks, or asynchronous borrowing.
+
+|4. IEEE and effects
+|Tier 3 strict FP IR, QF_FP/Gappa/interval backend, `echo-types` residue
+  certificates; MPR capability footprints; statistical warrants segregated.
+|NaN/Inf/rounding/fastmath adversarial tests; certified error bounds; no
+  deterministic-safety promotion of Tier 4 results.
+|No proof of unrestricted numerical algorithms or statistical certainty.
+
+|5. Ecosystem hardening
+|Pkg release workflow, JET + runtime allocation suite, `echidnabot`, receipt
+  cache, docs and migration tooling.
+|Reproducible clean build; independent Receipt verification; cache invalidation
+  tests; documented support matrix and security audit.
+|No guarantee across Julia compiler versions or targets not tested and pinned.
+|===
+
+== Soundness obligations and open decisions
+
+The first release must publish its trusted computing base: Julia parser/compiler
+adapter, contract elaborator, IR lowerer, solver translation, Dedukti checker,
+Idris2/Zig verifiers, ABI manifest generator, and any runtime guards. A verifier
+bug is possible even when a solver is sound. Keep translations small, use
+checker-validated certificates, test translations against independent
+semantics, and never treat an external system's status string as a proof.
+
+Before implementation freezes, decide and document: supported Julia minors and
+target triples; the exact Idris2/ZigProve versions and ABI generator format;
+whether `mutation.rs` is a mandatory CI executable or a project-local adapter;
+which SMT/FP certificate formats are independently checked; and how Julia
+world fingerprints are captured without depending on unstable internals. Until
+resolved, the corresponding feature remains `UNKNOWN`/experimental rather than
+implicitly trusted.
+
+== References within this repository
+
+* `docs/architecture/APODEIXIS-MVP-IMPLEMENTATION-PLAN.adoc`: implementation
+  slices, current package entry points, acceptance gates, and immediate next steps.
+* `src/interface/Abi/Types.idr` and `Layout.idr`: initial ABI type/layout
+  scaffolding; platform constants there are examples, not target-wide proofs.
+* `src/interface/ffi/build.zig`: initial Zig build integration.
+* `verification/proofs/`: existing proof-language scaffolding and manifests.
+* `docs/ARCHITECTURE.adoc`: repository-level architecture overview.
