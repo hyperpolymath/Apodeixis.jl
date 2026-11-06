@@ -29,7 +29,7 @@ jobs:
   # ---------------------------------------------------------------------------
   deed-validate:
     name: Validate DEED manifests
-    uses: hyperpolymath/standards/.github/workflows/deed-conformance.yml@b3ce78e1a8cb24b33fde5c9da6a7c09486efda78
+    uses: metadatastician/standards/.github/workflows/deed-conformance.yml@7641c7fdb01420696b5420ab85d88f599f32f609
     with:
       require-files: true
 
@@ -41,7 +41,7 @@ jobs:
   # ---------------------------------------------------------------------------
   k9-validate:
     name: Validate K9 contracts
-    uses: hyperpolymath/standards/.github/workflows/k9-conformance.yml@b3ce78e1a8cb24b33fde5c9da6a7c09486efda78
+    uses: metadatastician/standards/.github/workflows/k9-conformance.yml@7641c7fdb01420696b5420ab85d88f599f32f609
     permissions:
       contents: read
       pull-requests: read

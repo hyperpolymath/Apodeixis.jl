@@ -33,10 +33,24 @@ Warrant-to-Receipt pipeline are planned work, not implemented features.
 * Idris2 ABI and Zig build scaffolding under `src/interface/`; these are
   starting points, not yet a complete, target-validated Julia FFI proof seam.
 
+[[ai-install]]
+== AI-Assisted Installation (Recommended)
+
+Give an assistant this instruction in your existing checkout:
+
+[source,text]
+----
+Set up the existing Apodeixis Julia package using docs/AI_INSTALLATION_GUIDE.adoc, run its package tests, and report source-policy limits. Do not create another repository or run repo-init.
+----
+
+For the manual route, use link:docs/SETUP.adoc[the setup guide].
+
 == Quick start
 
-Julia 1.9 or newer is declared in the package compatibility bounds. Runtime
-validation of the package is pending; see the implementation plan.
+Julia 1.9 and later 1.x releases are declared compatible. The
+package test workflow exercises Julia 1.9.4 with JuliaSyntax 0.4 and Julia
+1.12.1 with JuliaSyntax 1. See link:docs/SETUP.adoc[setup instructions] and
+the implementation plan for the current source-policy limits.
 
 [source,bash]
 ----

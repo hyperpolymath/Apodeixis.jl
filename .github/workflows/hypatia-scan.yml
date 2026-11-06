@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   hypatia:
-    uses: hyperpolymath/standards/.github/workflows/hypatia-scan-reusable.yml@b3ce78e1a8cb24b33fde5c9da6a7c09486efda78
+    uses: metadatastician/standards/.github/workflows/hypatia-scan-reusable.yml@7641c7fdb01420696b5420ab85d88f599f32f609
     # The reusable declares only the HYPATIA_SCAN_PAT secret and falls back to
     # the job token when the caller does not pass it; nothing is inherited.
 
