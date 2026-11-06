@@ -2,15 +2,16 @@
 # SPDX-License-Identifier: MPL-2.0
 #
 # check-lock-sync.sh — verify .github/workflows/actions.lock is in sync with the
-# workflow YAML, in BOTH directions (including job-level reusable-workflow refs),
+# workflow YAML, in BOTH directions (including recorded reusable-workflow refs),
 # AND that the lockfile is TRANSITIVELY CLOSED.
 #
-# Three clauses, each of which alone is insufficient:
+# Four clauses, each of which alone is insufficient:
 #
-#   1. every `uses:` in a workflow is locked under THAT workflow's own path;
+#   1. every step-level `uses:` is locked under THAT workflow's own path;
 #   2. every lockfile entry is still referenced by its workflow (no orphans);
 #   3. every ref NAMED anywhere in the lockfile resolves to a top-level
 #      `dependencies:` record — the lockfile has no dangling edges.
+#   4. every workflow file has a key, including workflows with no step actions.
 #
 # Clause 3 is not decoration. It is the clause that catches the failure mode that
 # clauses 1 and 2 are structurally blind to, and it was added only after that
@@ -32,13 +33,16 @@
 #   * a job-level ref ABSENT from the lockfile entirely is HARMLESS;
 #   * a ref PRESENT in the lockfile but unresolvable is FATAL.
 # So adding entries without closing them is strictly worse than adding nothing.
-# Clause 1 demands entries be added; only clause 3 makes that demand safe. Shipping
-# clause 1 without clause 3 actively steers a developer into the fatal state:
+# The former clause 1 demanded job-level entries too, steering developers into
+# the fatal state without clause 3:
 # Dependabot bumps a job-level ref -> clause 1 reds -> `gh actions-lock` is blind to
 # job-level refs and will not backfill -> the developer hand-adds the workflows:
 # entry to get green -> no dependencies: record -> CI dies silently, gate green.
 #
-# Exit 0 only when all three clauses hold. Any violation exits 1. There is no
+# Omitted job-level calls now follow the measured standards#968 rule: the
+# callee owns its action lock. A recorded call must still resolve under clause 3;
+# a step action at the same coordinate is never exempted by a reusable call.
+# Exit 0 only when all four clauses hold. Any violation exits 1. There is no
 # warn-only mode: a desync means GitHub refuses to start the run, so it must fail
 # the job. A `::warning::` cannot fail a job and would be a vacuous gate.
 

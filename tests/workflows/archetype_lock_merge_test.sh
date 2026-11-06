@@ -61,7 +61,6 @@ if spdx_ok "$fixture/bare.yml" || perms_ok "$fixture/bare.yml"; then
     fail "header predicates accept a workflow with no SPDX line and no permissions"
 fi
 
-# The identity control: the rewrite must be faithful to gh actions-lock's own
 # A reusable omission must never hide an unlocked step action at the same SHA.
 probe="$fixture/reusable/.github/workflows"
 mkdir -p "$probe"
