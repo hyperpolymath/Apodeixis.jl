@@ -21,17 +21,24 @@ concurrency:
 
 jobs:
   build:
-    timeout-minutes: 20
+    outputs:
+      pages-artifact-name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+    # The cold Pandoc dependency build exceeded the previous 20-minute budget.
+    timeout-minutes: 60
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Checkout casket-ssg
         uses: actions/checkout@v7.0.1
         with:
           repository: hyperpolymath/casket-ssg
+          ref: c190d2882d9ff27205dd5a5b6db6da12cc647a70
           path: .casket-ssg
+          persist-credentials: false
 
       - name: Setup GHCup
         uses: haskell-actions/setup@v2.12.1
@@ -46,7 +53,7 @@ jobs:
             ~/.cabal/packages
             ~/.cabal/store
             .casket-ssg/dist-newstyle
-          key: ${{ runner.os }}-casket-${{ hashFiles('.casket-ssg/casket-ssg.cabal') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-ghc-9.8.2-cabal-3.10-casket-${{ hashFiles('.casket-ssg/casket-ssg.cabal', '.casket-ssg/cabal.project*') }}
 
       - name: Build casket-ssg
         working-directory: .casket-ssg
@@ -76,6 +83,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5.0.0
         with:
+          name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
           path: '_site'
 
   deploy:
@@ -89,3 +97,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5.0.1
+        with:
+          artifact_name: ${{ needs.build.outputs.pages-artifact-name }}
