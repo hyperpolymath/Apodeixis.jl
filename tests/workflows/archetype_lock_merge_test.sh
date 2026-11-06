@@ -62,6 +62,32 @@ if spdx_ok "$fixture/bare.yml" || perms_ok "$fixture/bare.yml"; then
 fi
 
 # The identity control: the rewrite must be faithful to gh actions-lock's own
+# A reusable omission must never hide an unlocked step action at the same SHA.
+probe="$fixture/reusable/.github/workflows"
+mkdir -p "$probe"
+cat > "$probe/probe.yml" <<'YAML'
+name: probe
+on: push
+jobs:
+  child:
+    uses: example/repo/.github/workflows/child.yml@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+YAML
+cat > "$probe/actions.lock" <<'LOCK'
+version: 'v0.0.3'
+workflows:
+    '.github/workflows/probe.yml': []
+dependencies: {}
+LOCK
+lock_ok "$probe" || fail "an omitted reusable call should use its callee-owned lock"
+cat >> "$probe/probe.yml" <<'YAML'
+  inline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: example/repo@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+YAML
+if lock_ok "$probe"; then fail "a reusable omission hid an unlocked step at the same SHA"; fi
+
+# The identity control: the rewrite must be faithful to gh actions-lock's own
 # layout, or every merge would show up as a diff of the whole spine lock.
 { grep -m1 '^version:' "$spine_lock"; echo 'workflows: {}'; echo 'dependencies: {}'; } > "$fixture/empty.lock"
 cp "$spine_lock" "$fixture/identity.lock"

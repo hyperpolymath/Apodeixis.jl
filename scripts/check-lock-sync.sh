@@ -156,7 +156,14 @@ FNR == 1 { wf = FILENAME }
     gsub(/[[:space:]]+$/, "", raw)
     if (raw ~ /^\$\//) { dollar[wf] = dollar[wf] " " raw; next }   # known corruption
     n = norm(raw)
-    if (n != "") { uses[wf, ck(n)] = 1; useslist[wf] = useslist[wf] " " n }
+    if (n != "") {
+      uses[wf, ck(n)] = 1; useslist[wf] = useslist[wf] " " n
+      # Official gh actions-lock omits job-level reusable calls; their actions
+      # are locked by the callee. Match the measured standards#968 rule while
+      # preserving this checker's dangling-edge and unlisted-workflow gates.
+      if (raw ~ /\/\.github\/workflows\/[^@]+\.ya?ml@/) jobref[wf, ck(n)] = 1
+      else stepref[wf, ck(n)] = 1
+    }
   }
 }
 
@@ -180,7 +187,13 @@ END {
     for (j = 1; j <= nu; j++) {
       if (u[j] == "" || (u[j] in uniq)) continue
       uniq[u[j]] = 1
-      if (!((key SUBSEP ck(u[j])) in lock)) missing = missing " " u[j]
+      if (!((key SUBSEP ck(u[j])) in lock)) {
+        if ((wf SUBSEP ck(u[j])) in jobref && !((wf SUBSEP ck(u[j])) in stepref)) {
+          deferred++
+          continue
+        }
+        missing = missing " " u[j]
+      }
     }
     if (missing != "") {
       if (!(key in seen_path))
@@ -285,12 +298,14 @@ END {
     exit 1
   }
   printf "actions.lock is in sync and transitively closed:\n"
-  printf "  * every uses: is locked under its own workflow path (job-level reusable refs included)\n"
+  printf "  * every step-level uses: is locked under its own workflow path\n"
   printf "  * every lockfile entry is still referenced\n"
   printf "  * every ref named in the lockfile resolves to a dependencies: record (0 dangling edges)\n"
   printf "  * every workflow file has a lockfile key (zero-uses: workflows included)\n"
   if (nunref > 0)
     printf "  note: %d dependencies: record(s) are unreferenced - harmless, but prunable.\n", nunref
+  if (deferred > 0)
+    printf "  note: %d job-level reusable ref(s) omitted by gh actions-lock use callee-owned locks (standards#968).\n", deferred
 }
 AWK
 

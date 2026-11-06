@@ -10,13 +10,13 @@ not a prerequisite for running the Julia package.
 == Install and test
 
 Clone `hyperpolymath/Apodeixis.jl`, enter the checkout, and use Julia 1.9 or
-newer as declared in `Project.toml`:
+a later 1.x release, as declared in `Project.toml`:
 
 [source,bash]
 ----
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
 julia --project=. scripts/apodeixis.jl --help
-julia --project=. scripts/apodeixis.jl path/to/source.jl
+julia --project=. scripts/apodeixis.jl audit path/to/source.jl
 ----
 
 The CLI returns 0 for policy-clean source, 1 for rejected source, and 2 for

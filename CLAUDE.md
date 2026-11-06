@@ -3,14 +3,14 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 -->
 <!-- Hand-authored notes may go ABOVE or BELOW the generated region. -->
-<!-- Project orientation: this checkout is hyperpolymath/Apodeixis.jl, the Julia
+Project orientation: this checkout is hyperpolymath/Apodeixis.jl, the Julia
 source-policy auditor described by Project.toml, README.adoc and src/Apodeixis.jl.
 The deed and generated region below are inherited, uninstantiated template
 metadata. Their template identity and production status do not describe this
 package. Follow docs/SETUP.adoc to test the existing package; do not run repo-init
 or mint an estate identity as an installation step. Registry enrolment and deed
 instantiation remain outstanding. Preserve the generated region until its owning
-deed can be corrected through that process. -->
+deed can be corrected through that process.
 <!-- The region between the ARRIVAL-PACK markers is generated from this
      repo's deed by `just claude-md` — do not hand-edit it. -->
 

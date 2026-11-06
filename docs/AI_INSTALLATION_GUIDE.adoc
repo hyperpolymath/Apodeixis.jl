@@ -3,6 +3,9 @@
 = AI-Assisted Development Guide for Apodeixis.jl
 :toc:
 
+[[ai-implementation]]
+== Implementation for an AI agent
+
 This is an existing Julia package, not a template to instantiate. Start with
 `README.adoc`, `Project.toml`, `src/Apodeixis.jl`, and `test/runtests.jl`.
 Use link:SETUP.adoc[the package setup instructions].
@@ -18,3 +21,11 @@ The repository contains inherited template documents and an uninstantiated
 deed/arrival pack. Their template identity and production status do not describe
 Apodeixis. Do not create another repository, mint an identity, or run `repo-init`
 as part of installing or testing this package.
+
+== Privacy
+
+Package installation contacts Julia registries and package servers to download
+dependencies. The source-policy auditor reads local source and emits local
+diagnostics; it does not need a network service to audit a file. External AI
+assistants have their own data handling policies: do not send private source or
+credentials to one without the owner's consent.
