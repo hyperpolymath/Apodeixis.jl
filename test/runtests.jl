@@ -232,9 +232,11 @@ end
         @test codes(audit_source(siblings; mutation_score=100)) ==
               Set([:APX_INBOUNDS_OUTSIDE_VERIFIED])
 
-        # The MVP rejects global declarations only within the annotated body.
-        @test is_policy_clean(audit_source("global mutable_state = 1"))
-        @test is_policy_clean(audit_source("function f(); global mutable_state = 1; end"))
+        # The MVP rejects global declarations at file scope and in functions,
+        # as specified by the implementation plan, regardless of annotation.
+        @test codes(audit_source("global mutable_state = 1")) == Set([:APX_GLOBAL_MUTATION])
+        @test codes(audit_source("function f(); global mutable_state = 1; end")) ==
+              Set([:APX_GLOBAL_MUTATION])
         @test codes(audit_source("@verified f() = (global mutable_state = 1)")) ==
               Set([:APX_GLOBAL_MUTATION])
         @test is_policy_clean(audit_source("@mystery 1"))
