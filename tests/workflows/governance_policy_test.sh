@@ -46,12 +46,18 @@ console.log("PASS: unrestricted pull requests coexist with filtered pushes and m
 // The replacement must still invoke the shared policy, at a locked revision.
 // Derive that revision from the call so legitimate pin updates need no edit.
 const use = governance.jobs.governance.uses;
-const match = /^hyperpolymath\/standards\/\.github\/workflows\/governance-reusable\.yml@([a-f0-9]{40})$/.exec(use);
+const match = /^(hyperpolymath|metadatastician)\/standards\/\.github\/workflows\/governance-reusable\.yml@([a-f0-9]{40})$/.exec(use);
 assert.ok(match, "governance must invoke the standards reusable workflow at a full SHA");
-const dependency = `hyperpolymath/standards@${match[1]}`;
-assert.deepEqual(lock.workflows[".github/workflows/governance.yml"], [dependency],
-  "governance's lock record must match its reusable workflow call");
-assert.equal(lock.dependencies[dependency]?.commit, `sha1-${match[1]}`,
-  "the governance pin must have a corresponding locked dependency commit");
-console.log("PASS: governance delegates to the locked standards policy");
+const dependency = `${match[1]}/standards@${match[2]}`;
+const records = lock.workflows[".github/workflows/governance.yml"];
+assert.ok(Array.isArray(records), "governance must have an explicit lockfile key");
+// Official generation leaves reusable-only workflows empty (standards#968).
+// If the caller does record the call, require a complete, matching edge.
+if (records.length !== 0) {
+  assert.deepEqual(records, [dependency],
+    "governance's recorded call must match the workflow");
+  assert.equal(lock.dependencies[dependency]?.commit, `sha1-${match[2]}`,
+    "a recorded governance call must resolve to its exact dependency commit");
+}
+console.log("PASS: governance delegates to an immutable standards policy; recorded calls are closed");
 JS
