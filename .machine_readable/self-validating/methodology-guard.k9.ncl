@@ -57,7 +57,7 @@ let methodology_guard = {
     state_not_template = {
       description = "The ROADMAP journal must not contain template placeholders",
       severity = "warning",
-      # The journal, not the repo deed: a deed names apodeixis.jl in
+      # The journal, not the repo deed: a deed names Apodeixis.jl in
       # (lineage :instantiated-from) by design, so this pattern would always
       # fire there.
       file = "docs/status/ROADMAP.adoc",
@@ -69,8 +69,8 @@ let methodology_guard = {
       # out of the file (in this comment too) so init cannot match it, while
       # Nickel still evaluates the element back to the full token. Do not
       # "simplify" it to a plain string. (The PLACEHOLDER token and
-      # "apodeixis.jl" are not init tokens, so they survive as-is.)
-      reject_patterns = ["{{PLACEHOLDER}}", "{{" ++ "PROJECT}}", "apodeixis.jl"],
+      # "Apodeixis.jl" are not init tokens, so they survive as-is.)
+      reject_patterns = ["{{PLACEHOLDER}}", "{{" ++ "PROJECT}}", "Apodeixis.jl"],
     },
 
     coverage_updated = {

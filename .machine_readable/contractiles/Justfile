@@ -24,7 +24,7 @@ mod provision 'build/just/provision.just'
 # Project metadata — customize these
 project := "apodeixis.jl"
 OWNER := "hyperpolymath"
-REPO := "apodeixis.jl"
+REPO := "Apodeixis.jl"
 version := "0.1.0"
 tier := "infrastructure"  # 1 | 2 | infrastructure
 
@@ -574,7 +574,7 @@ opsm: provision::opsm
 
 # Guided tour of key features
 tour:
-    @echo "=== apodeixis.jl Tour ==="
+    @echo "=== Apodeixis.jl Tour ==="
     @echo ""
     @echo "1. Project structure:"
     @ls -la
@@ -589,12 +589,12 @@ tour:
 
 # Open feedback channel with diagnostic context
 help-me:
-    @echo "=== apodeixis.jl Help ==="
+    @echo "=== Apodeixis.jl Help ==="
     @echo "Platform: $(uname -s) $(uname -m)"
     @echo "Shell: $SHELL"
     @echo ""
     @echo "To report an issue:"
-    @echo "  https://github.com/hyperpolymath/apodeixis.jl/issues/new"
+    @echo "  https://github.com/hyperpolymath/Apodeixis.jl/issues/new"
     @echo ""
     @echo "Include the output of 'just doctor' in your report."
 

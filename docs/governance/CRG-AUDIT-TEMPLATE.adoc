@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
-= apodeixis.jl — CRG Audit (2026-11-12)
+= Apodeixis.jl — CRG Audit (2026-11-12)
 Jonathan D.A. Jewell
 2026-11-12
 :toc:
@@ -18,11 +18,11 @@ Jonathan D.A. Jewell
 
 == Scope and Standard
 
-Evaluates the `apodeixis.jl` repository against
+Evaluates the `Apodeixis.jl` repository against
 *Component Readiness Grades v2.0 (STRICT)*, 2026-03-30 revision.
 
 - Standard: `standards/component-readiness-grades/COMPONENT-READINESS-GRADES.md`
-- Template (criteria boilerplate): `apodeixis.jl/docs/governance/CRG-CRITERIA.adoc`
+- Template (criteria boilerplate): `Apodeixis.jl/docs/governance/CRG-CRITERIA.adoc`
 - Self-declared grade (prior art):
   * `docs/status/ROADMAP.adoc` → `Declared CRG grade: <declared>` line
   * `docs/READINESS.md` (if present) → per-component grades
@@ -101,7 +101,7 @@ Do *not* mark PRESENT without citing the path.
 | Build-system policy (RSR R-020)
 
 | Remote
-| `git@github.com:hyperpolymath/apodeixis.jl.git` (origin only) / drift
+| `git@github.com:hyperpolymath/Apodeixis.jl.git` (origin only) / drift
 | `git remote -v`
 |===
 

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 // Template: QUICKSTART-USER.adoc — 5-minute path to working software
-// Replace apodeixis.jl, Rsr Template Repo — See README.adoc for details., just run, Rsr Template Repo started successfully. with actuals
-= apodeixis.jl — Quick Start for Users
+// Replace Apodeixis.jl, Rsr Template Repo — See README.adoc for details., just run, Rsr Template Repo started successfully. with actuals
+= Apodeixis.jl — Quick Start for Users
 :toc:
 :toclevels: 2
 
-== What is apodeixis.jl?
+== What is Apodeixis.jl?
 
 Rsr Template Repo — See README.adoc for details.
 
@@ -38,8 +38,8 @@ Before you begin, ensure you have:
 [source,bash]
 ----
 # Clone and set up
-git clone https://github.com/hyperpolymath/apodeixis.jl.git
-cd apodeixis.jl
+git clone https://github.com/hyperpolymath/Apodeixis.jl.git
+cd Apodeixis.jl
 just setup
 ----
 
@@ -103,7 +103,7 @@ just heal
 * **In-app**: `just run --help`
 * **Guided tour**: `just tour`
 * **Report a problem**: `just help-me` (pre-fills diagnostic context)
-* **Wiki**: https://github.com/hyperpolymath/apodeixis.jl/wiki
+* **Wiki**: https://github.com/hyperpolymath/Apodeixis.jl/wiki
 
 == Uninstall
 

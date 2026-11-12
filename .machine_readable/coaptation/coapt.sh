@@ -46,7 +46,7 @@ case "$MODE" in
       basis="$CO/receipts/reanchor-basis.toml"
       # repo name from the repo deed, not a hardcoded literal — this
       # script is shared verbatim by every repo instantiated from
-      # apodeixis.jl, so a literal "apodeixis.jl" here would
+      # Apodeixis.jl, so a literal "Apodeixis.jl" here would
       # misreport every one of them.
       repo_name="$(bash "$ROOT/scripts/deed-field.sh" "$(bash "$ROOT/scripts/deed-field.sh" --find "$ROOT")" "" canonical-name)"
       {

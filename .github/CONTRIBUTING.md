@@ -4,8 +4,8 @@ Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 -->
 ```
 # Clone the repository
-git clone https://github.com/hyperpolymath/apodeixis.jl.git
-cd apodeixis.jl
+git clone https://github.com/hyperpolymath/Apodeixis.jl.git
+cd Apodeixis.jl
 
 # Using Guix (recommended for reproducibility)
 guix shell -D -f build/guix.scm
@@ -72,10 +72,10 @@ Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.md) an
 
 Look for issues labelled:
 
-- [`good first issue`](https://github.com/hyperpolymath/apodeixis.jl/labels/good%20first%20issue) — Simple Perimeter 3 tasks
-- [`help wanted`](https://github.com/hyperpolymath/apodeixis.jl/labels/help%20wanted) — Community help needed
-- [`documentation`](https://github.com/hyperpolymath/apodeixis.jl/labels/documentation) — Docs improvements
-- [`perimeter-3`](https://github.com/hyperpolymath/apodeixis.jl/labels/perimeter-3) — Community sandbox scope
+- [`good first issue`](https://github.com/hyperpolymath/Apodeixis.jl/labels/good%20first%20issue) — Simple Perimeter 3 tasks
+- [`help wanted`](https://github.com/hyperpolymath/Apodeixis.jl/labels/help%20wanted) — Community help needed
+- [`documentation`](https://github.com/hyperpolymath/Apodeixis.jl/labels/documentation) — Docs improvements
+- [`perimeter-3`](https://github.com/hyperpolymath/Apodeixis.jl/labels/perimeter-3) — Community sandbox scope
 
 ---
 

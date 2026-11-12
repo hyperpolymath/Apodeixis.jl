@@ -6,8 +6,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/hyperpolymath/apodeixis.jl/security/advisories/new
+    url: https://github.com/hyperpolymath/Apodeixis.jl/security/advisories/new
     about: Report privately via a security advisory. Do NOT open a public issue.
   - name: Question or support request
-    url: https://github.com/hyperpolymath/apodeixis.jl/discussions
+    url: https://github.com/hyperpolymath/Apodeixis.jl/discussions
     about: Ask a question. See .github/SUPPORT.md for what to expect.

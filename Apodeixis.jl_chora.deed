@@ -1,6 +1,6 @@
 ;; SPDX-License-Identifier: MPL-2.0
 ;
-; The repo deed of apodeixis.jl: one-deed-per-repo doctrine (standards#837,
+; The repo deed of Apodeixis.jl: one-deed-per-repo doctrine (standards#837,
 ; owner ruling 2026-09-19, Option A). Folds the former ply manifest tree
 ; (82 per-directory manifests) and the family-7 AI allocation manifest
 ; into deed clauses.
@@ -16,9 +16,9 @@
 ; field; scripts/deed-clause.sh is the one writer.
 (repo-deed
   :schema-version "1.0.0"
-  :canonical-name "apodeixis.jl"
+  :canonical-name "Apodeixis.jl"
   :beholding-chora #u5"estate/chora"
-  :repo-uuid #u5"github.com/hyperpolymath/apodeixis.jl"
+  :repo-uuid #u5"github.com/hyperpolymath/Apodeixis.jl"
   ; The canon pin: which release of hyperpolymath/standards canon.lock this
   ; repo implements. It is the ONLY canon pin in this deed (deed_canon
   ; refuses zero or two); the (rsr-profile) clause below declares
@@ -49,7 +49,7 @@
   ;     uuid5(namespace = URL, name = the header :repo-uuid string)
   ; and anyone can recompute it (gv-clade-index:
   ; docs/SPEC-clade-verisim-portal.adoc §Identity Model):
-  ;     uuidgen --sha1 --namespace @url --name "github.com/hyperpolymath/apodeixis.jl"
+  ;     uuidgen --sha1 --namespace @url --name "github.com/hyperpolymath/Apodeixis.jl"
   ; The owner is part of the name, so part of the identity: record the owner
   ; that is true today, and re-derive if the repo ever moves.
   ;
@@ -73,7 +73,7 @@
   ; HOW TO CHOOSE: the primary clade reflects the project's core value
   ; proposition, not its implementation. A game written in Idris2 is `gm`.
   ; Set BOTH :primary and :primary-name, and make them agree; then set
-  ; :prefixed-name to "<primary>-apodeixis.jl". `just validate-rsr` fails while
+  ; :prefixed-name to "<primary>-Apodeixis.jl". `just validate-rsr` fails while
   ; :primary is UNASSIGNED. That is deliberate: an unchosen clade must never
   ; look like a chosen one.
   ;
@@ -83,7 +83,7 @@
   (identity
     :primary-forge github
     :owner "hyperpolymath"
-    :prefixed-name "UNASSIGNED-apodeixis.jl")
+    :prefixed-name "UNASSIGNED-Apodeixis.jl")
   (clade
     :primary UNASSIGNED
     :primary-name "UNASSIGNED"
@@ -91,7 +91,7 @@
     :assigned "2026-11-12"
     :rationale "")
   (forges
-    :github "hyperpolymath/apodeixis.jl")
+    :github "hyperpolymath/Apodeixis.jl")
   ; :type is one of standalone monorepo monorepo-child inflated deflated hub
   ; satellite. A hub COORDINATES an ecosystem family; a satellite is
   ; coordinated by one and keeps :parent "" (parent names a monorepo parent,
@@ -124,7 +124,7 @@
   ; :relationship is one of standard-source build-tooling validation-tooling
   ; signing-tooling verification-tooling minted-from registry.
   (ecosystem
-    :project "apodeixis.jl"
+    :project "Apodeixis.jl"
     :ecosystem "hyperpolymath"
     :position-type "UNASSIGNED"
     :purpose "UNASSIGNED"
@@ -198,7 +198,7 @@
   (manifest
     :version "0.1.0"
     :last-updated "2026-11-12"
-    :project "apodeixis.jl"
+    :project "Apodeixis.jl"
     :purpose "Canonical RSR (Rhodium Standard Repository) template — governance, CI/CD, machine-readable metadata, ABI/FFI seam and formal-verification scaffolding that hyperpolymath projects are instantiated from."
     (agent :name CLAUDE :role "proofs, compilers, repo-local implementation, CI/CD, formal verification, Rust/Idris2/Zig")
     (agent :name CHATGPT :role "prose, papers, publication review, standards docs, outreach drafts, letters")
@@ -213,8 +213,8 @@
   (ply
     (directory :ply 1 :path ".github")
     (directory :id "machine-readable-pillar" :ply 1 :path ".machine_readable" :description "Registry for all machine-readable metadata, policies, and internal\nautomation scripts."
-      (canonical-locations :ai_configs "ai/" :anchor "apodeixis.jl_chora.deed (anchor)" :compliance "compliance/" :neurosym "apodeixis.jl_chora.deed (neurosym)" :playbook "apodeixis.jl_chora.deed (playbook)" :policies "apodeixis.jl_chora.deed (policies)" :scripts "scripts/")
-      :invariants ("Repo metadata MUST live in the repo deed (apodeixis.jl_chora.deed) and follow the DEED grammar" "Internal automation MUST live in scripts/ subfolder")
+      (canonical-locations :ai_configs "ai/" :anchor "Apodeixis.jl_chora.deed (anchor)" :compliance "compliance/" :neurosym "Apodeixis.jl_chora.deed (neurosym)" :playbook "Apodeixis.jl_chora.deed (playbook)" :policies "Apodeixis.jl_chora.deed (policies)" :scripts "scripts/")
+      :invariants ("Repo metadata MUST live in the repo deed (Apodeixis.jl_chora.deed) and follow the DEED grammar" "Internal automation MUST live in scripts/ subfolder")
       (directory :id "ai-registry" :ply 2 :path ".machine_readable/ai" :description "Sub-registry for ai metadata.")
       (directory :id "configs-registry" :ply 2 :path ".machine_readable/configs" :description "Sub-registry for configs metadata.")
       (directory :ply 0 :path ".machine_readable/descriptiles" :description "This manifest declares the AI-assistant context for the descriptiles machine-readable metadata directory."
@@ -336,7 +336,7 @@
   ; and the golden path. The CLAUDE.md arrival pack reads anchor/golden-path and hashes this clause (ANCHOR@…).
   (anchor
     :schema "hyperpolymath.anchor/1"
-    :repo "hyperpolymath/apodeixis.jl"
+    :repo "hyperpolymath/Apodeixis.jl"
     :authority "upstream-canonical"
     :purpose (
       "Define canonical semantics and policy boundaries for this repository."
@@ -347,7 +347,7 @@
       :version "1.0.0"
       :last-updated "2026-11-12")
     (identity
-      :project "apodeixis.jl"
+      :project "Apodeixis.jl"
       ; language | library | service | tool
       :kind "UNASSIGNED"
       :one-sentence "Research-stage Julia verification toolchain for contracts, compiler analysis, numeric semantics, and verified FFI with independently checked proof targets."
@@ -641,7 +641,7 @@
         ; The pattern ".*" allows hidden dotfiles implicitly; RRA checks specific
         ; dotfile rules below.
         (allow-list
-          :files ("README.adoc" "CHANGELOG.adoc" "Justfile" "LICENSE" "apodeixis.jl_chora.deed" "CITATION.cff" "CLAUDE.md")
+          :files ("README.adoc" "CHANGELOG.adoc" "Justfile" "LICENSE" "Apodeixis.jl_chora.deed" "CITATION.cff" "CLAUDE.md")
           :patterns (".*"))
         ; Relocation rules: move heavy prose out of the root
         (relocations
@@ -739,7 +739,7 @@
     ; See: https://github.com/hyperpolymath/standards/tree/main/groove-protocol
     (groove
       :version "1.0"
-      ; Service identity — replace apodeixis.jl with your project name
+      ; Service identity — replace Apodeixis.jl with your project name
       :service "apodeixis.jl"
       :service-version "0.1.0"
       ; Primary port — MUST be unique across the ecosystem. Check PORT-REGISTRY.md
@@ -1062,7 +1062,7 @@
   ; fresh mint (2026-10-20): 101 rendered files differ. The template pin
   ; is checked by scripts/check-template-conformance.sh instead.
   (variant
-    :project "apodeixis.jl"
+    :project "Apodeixis.jl"
     :schema-version "0.1.0"
     :last-updated "2026-11-12"
     :parent "hyperpolymath/rsr-template-repo"
@@ -1076,7 +1076,7 @@
     (paths
       :added ()
       :removed ("archetypes/" "build/docs-seed/" "build/templates/" "rsr-template-repo_chora.deed")
-      :diverged ("apodeixis.jl_chora.deed" "docs/status/ROADMAP.adoc")))
+      :diverged ("Apodeixis.jl_chora.deed" "docs/status/ROADMAP.adoc")))
   ; provenance — what this repo was minted FROM. Written once, at mint,
   ; by build/just/repo-init.just. Tools that want "what is this repo" read
   ; the rest of the deed; tools that want "where did it come from" read this.

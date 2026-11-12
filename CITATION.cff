@@ -3,11 +3,11 @@ message: "If you use this software, please cite it as below."
 authors:
   - family-names: "Jewell"
     given-names: "Jonathan D.A."
-title: "apodeixis.jl"
+title: "Apodeixis.jl"
 version: 0.1.0
 date-released: "2026-11-12"
-url: "https://github.com/hyperpolymath/apodeixis.jl"
-repository-code: "https://github.com/hyperpolymath/apodeixis.jl"
+url: "https://github.com/hyperpolymath/Apodeixis.jl"
+repository-code: "https://github.com/hyperpolymath/Apodeixis.jl"
 license: MPL-2.0
 keywords:
   - "rsr"

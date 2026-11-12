@@ -38,7 +38,7 @@
   (arguments (list #:install-plan #~'(("." "share/apodeixis.jl/"))))
   (native-inputs (map spec->input (list "git" "bash" "coreutils" "nss-certs" "just" "mise"
                                         "shellcheck" "chez-scheme" "gmp" "gcc-toolchain" "zig")))
-  (home-page "https://github.com/hyperpolymath/apodeixis.jl")
+  (home-page "https://github.com/hyperpolymath/Apodeixis.jl")
   (synopsis "Rhodium Standard Repository template")
   (description "The estate's repository template: the RSR layout, an Idris2 ABI
 seam with a Zig FFI, CI gates, and the provisioning set (launcher, Justfile,

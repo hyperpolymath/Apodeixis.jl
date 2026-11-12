@@ -56,12 +56,12 @@
   },
 
   # --- ADJUST: accessibility/hygiene posture (advisory; never gates) ---
-  # The ANCHOR identity block still carries apodeixis.jl; for the template
+  # The ANCHOR identity block still carries Apodeixis.jl; for the template
   # itself that is expected, but it is honestly a posture dip worth surfacing.
   "adjust.placeholder-drift" = {
     kind = "descriptile",
     witnesses = [{ fact = "anchor.project", op = 'not_contains, arg = "{{" }],
-    note = "deed (anchor (identity :project)) is un-substituted (apodeixis.jl) ⇒ posture dip",
+    note = "deed (anchor (identity :project)) is un-substituted (Apodeixis.jl) ⇒ posture dip",
   },
 
   # --- BUST: deliberately NO descriptile witness since rsr-template-repo#209. ---

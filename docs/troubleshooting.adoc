@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 // SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
-= Troubleshooting — apodeixis.jl
+= Troubleshooting — Apodeixis.jl
 :revdate: 2026-MM-DD
 
 This file is a *living FAQ* — known failure modes and recovery paths.
@@ -54,5 +54,5 @@ just log-tail        # last N lines of logs
 
 * `docs/architecture.adoc` — internals.
 * `docs/decisions/` — historical record of why things are this shape.
-* `https://github.com/hyperpolymath/apodeixis.jl/issues?q=is%3Aissue+<your symptom>` — has anyone hit this before?
+* `https://github.com/hyperpolymath/Apodeixis.jl/issues?q=is%3Aissue+<your symptom>` — has anyone hit this before?
 * `https://github.com/hyperpolymath/standards/issues` — for estate-wide problems.

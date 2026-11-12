@@ -6,12 +6,12 @@
 # ;; SPDX-License-Identifier: MPL-2.0
 # (praxis-deed
 #   :schema-version  "1.0.0"
-#   :canonical-name  "apodeixis.jl-launcher"
+#   :canonical-name  "Apodeixis.jl-launcher"
 #   :beholding-chora #u5"estate/chora"
 #   (artefact :type "launcher" :version "0.1.0"
 #             :generator "provision-set")
-#   (app :name "apodeixis.jl" :display "apodeixis.jl"
-#        :url "https://github.com/hyperpolymath/apodeixis.jl" :archetype "library")
+#   (app :name "Apodeixis.jl" :display "Apodeixis.jl"
+#        :url "https://github.com/hyperpolymath/Apodeixis.jl" :archetype "library")
 #   (compliance :standard-version "0.6.0"
 #               :standards ("launcher-standard.adoc"
 #                           "PROVISIONING-STANDARD.adoc"))

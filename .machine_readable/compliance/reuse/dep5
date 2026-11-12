@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: apodeixis.jl
+Upstream-Name: Apodeixis.jl
 Upstream-Contact: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
-Source: https://github.com/hyperpolymath/apodeixis.jl
+Source: https://github.com/hyperpolymath/Apodeixis.jl
 
 # Default: all files are MPL-2.0
 Files: *

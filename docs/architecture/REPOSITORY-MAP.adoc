@@ -81,6 +81,10 @@ predecessors did.
 | yes
 | -
 
+| `Apodeixis.jl_chora.deed`
+| yes
+| the repo deed: universal AI entry point; family-7 allocation manifest + ply tree folded in (standards#837 pilot). Filename carries the repo slug (deed dispatch <stem>_chora.deed), so repo-init renames it at mint
+
 | `CHANGELOG.adoc`
 | yes
 | AsciiDoc is the estate-standard documentation format
@@ -120,10 +124,6 @@ predecessors did.
 | `README.adoc`
 | yes
 | -
-
-| `apodeixis.jl_chora.deed`
-| yes
-| the repo deed: universal AI entry point; family-7 allocation manifest + ply tree folded in (standards#837 pilot). Filename carries the repo slug (deed dispatch <stem>_chora.deed), so repo-init renames it at mint
 
 | `benches/`
 | optional

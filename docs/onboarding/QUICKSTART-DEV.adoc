@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 // Template: QUICKSTART-DEV.adoc — clone → build → test → PR
-// Replace apodeixis.jl, UNASSIGNED, UNASSIGNED, UNASSIGNED with actuals
-= apodeixis.jl — Quick Start for Developers
+// Replace Apodeixis.jl, UNASSIGNED, UNASSIGNED, UNASSIGNED with actuals
+= Apodeixis.jl — Quick Start for Developers
 :toc:
 :toclevels: 2
 
@@ -23,8 +23,8 @@ guix shell
 
 [source,bash]
 ----
-git clone https://github.com/hyperpolymath/apodeixis.jl.git
-cd apodeixis.jl
+git clone https://github.com/hyperpolymath/Apodeixis.jl.git
+cd Apodeixis.jl
 just setup-dev
 ----
 
@@ -46,7 +46,7 @@ UNASSIGNED
 
 [source]
 ----
-apodeixis.jl/
+Apodeixis.jl/
 ├── src/                  # Source code
 ├── src/interface/Abi/              # Idris2 ABI definitions (if applicable)
 ├── ffi/zig/              # Zig FFI bridge (if applicable)
@@ -100,5 +100,5 @@ Or read the repo deed (`*_chora.deed` at root) and `.claude/CLAUDE.md` directly.
 == Get Help
 
 * **Architecture**: link:EXPLAINME.adoc[EXPLAINME.adoc]
-* **Wiki**: https://github.com/hyperpolymath/apodeixis.jl/wiki
+* **Wiki**: https://github.com/hyperpolymath/Apodeixis.jl/wiki
 * **Report issue**: `just help-me`

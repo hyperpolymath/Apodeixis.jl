@@ -35,7 +35,7 @@ There are two configurations for the same image:
 . Install the *Dev Containers* extension (`ms-vscode-remote.remote-containers`).
 . Set `dev.containers.dockerPath` to `podman` in VS Code settings.
 . Open the repo folder, then choose **Reopen in Container** and pick
-  **apodeixis.jl (Podman)**.
+  **Apodeixis.jl (Podman)**.
 
 == devcontainer CLI (Podman)
 
@@ -47,7 +47,7 @@ bunx @devcontainers/cli up --workspace-folder . --docker-path podman
 == GitHub Codespaces
 
 . From the repository on GitHub, click **Code > Codespaces > ... > New with options**.
-. Choose the **apodeixis.jl (Docker / Codespaces)** configuration.
+. Choose the **Apodeixis.jl (Docker / Codespaces)** configuration.
 
 == Gitpod
 
@@ -56,6 +56,6 @@ bunx @devcontainers/cli up --workspace-folder . --docker-path podman
 
 == Customization
 
-Replace the `apodeixis.jl` placeholders in both `devcontainer.json` files and
+Replace the `Apodeixis.jl` placeholders in both `devcontainer.json` files and
 the `Containerfile` with your actual project name. `just deps` runs automatically
 after the container is created. Run it again to check the environment.

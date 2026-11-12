@@ -4,14 +4,14 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
 
-== Threat Model: apodeixis.jl
+== Threat Model: Apodeixis.jl
 
 === Document Info
 
 |===
 | Field | Value
 
-| Project | apodeixis.jl
+| Project | Apodeixis.jl
 | Version | 1.0
 | Last Reviewed | 2026-11-12
 | Author | Jonathan D.A. Jewell
@@ -39,7 +39,7 @@
 
 === System Overview
 
-Brief description of apodeixis.jl and its architecture.
+Brief description of Apodeixis.jl and its architecture.
 
 NOTE: See link:../STATE-VISUALIZER.adoc[STATE-VISUALIZER.adoc] for the full architecture diagram and completion dashboard.
 

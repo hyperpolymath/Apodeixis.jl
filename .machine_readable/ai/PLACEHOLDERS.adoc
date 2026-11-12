@@ -23,10 +23,10 @@ validates the result, and runs k9-svc checks if available.
 sed -i 's/Jonathan D.A. Jewell/Jane Doe/g' $(grep -rl 'Jonathan D.A. Jewell' .)
 sed -i 's/j.d.a.jewell@open.ac.uk/jane@example.org/g' $(grep -rl 'j.d.a.jewell@open.ac.uk' .)
 sed -i 's/hyperpolymath/my-org/g' $(grep -rl 'hyperpolymath' .)
-sed -i 's/apodeixis.jl/my-project/g' $(grep -rl 'apodeixis.jl' .)
+sed -i 's/Apodeixis.jl/my-project/g' $(grep -rl 'Apodeixis.jl' .)
 sed -i 's/APODEIXIS_JL/MY_PROJECT/g' $(grep -rl 'APODEIXIS_JL' .)
 sed -i 's/apodeixis_jl/my_project/g' $(grep -rl 'apodeixis_jl' .)
-sed -i 's/apodeixis.jl/my-project/g' $(grep -rl 'apodeixis.jl' .)
+sed -i 's/Apodeixis.jl/my-project/g' $(grep -rl 'Apodeixis.jl' .)
 sed -i 's/github.com/github.com/g' $(grep -rl 'github.com' .)
 sed -i "s/2026/$(date +%Y)/g" $(grep -rl '2026' .)
 sed -i "s/2026-11-12/$(date +%Y-%m-%d)/g" $(grep -rl '2026-11-12' .)
@@ -51,11 +51,11 @@ sed -i "s/2026-11-12/$(date +%Y-%m-%d)/g" $(grep -rl '2026-11-12' .)
 
 | Placeholder | Description | Example | Files |
 |---|---|---|---|
-| `apodeixis.jl` | Human-readable project name | `My Project` | SECURITY.md, CODE_OF_CONDUCT.md, TOPOLOGY.md, docs/status/ROADMAP.adoc (via build/templates/ROADMAP.adoc.in), Justfile, GOVERNANCE.md, MAINTAINERS.md, devcontainer.json |
+| `Apodeixis.jl` | Human-readable project name | `My Project` | SECURITY.md, CODE_OF_CONDUCT.md, TOPOLOGY.md, docs/status/ROADMAP.adoc (via build/templates/ROADMAP.adoc.in), Justfile, GOVERNANCE.md, MAINTAINERS.md, devcontainer.json |
 | `Research-stage Julia verification toolchain for contracts, compiler analysis, numeric semantics, and verified FFI with independently checked proof targets.` | One-line description | `A tool for X` | README.adoc, build/container/Containerfile |
 | `APODEIXIS_JL` | Uppercase identifier (for Idris2 modules, C macros) | `MY_PROJECT` | ABI-FFI-README.md, src/interface/abi/*.idr, src/interface/ffi/*.zig |
 | `apodeixis_jl` | Lowercase identifier (for C symbols, filenames) | `my_project` | ABI-FFI-README.md, src/interface/ffi/*.zig |
-| `apodeixis.jl` | Repository name (slug) | `my-project` | CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, cliff.toml |
+| `Apodeixis.jl` | Repository name (slug) | `my-project` | CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, cliff.toml |
 | `hyperpolymath` | GitHub/GitLab org or username | `my-org` | SPDX headers, CONTRIBUTING.md, SECURITY.md, GOVERNANCE.md, MAINTAINERS.md, CODEOWNERS, mirror.yml, cliff.toml |
 | `github.com` | Git forge domain | `github.com` | CONTRIBUTING.md |
 
@@ -74,7 +74,7 @@ sed -i "s/2026-11-12/$(date +%Y-%m-%d)/g" $(grep -rl '2026-11-12' .)
 | `j.d.a.jewell@open.ac.uk` | Security contact email | `security@example.org` | SECURITY.md |
 | `{{PGP_FINGERPRINT}}` | 40-char PGP fingerprint | `ABCD 1234 ...` | SECURITY.md |
 | `{{PGP_KEY_URL}}` | URL to public PGP key | `https://keys.openpgp.org/...` | SECURITY.md |
-| `https://github.com/hyperpolymath/apodeixis.jl` | Project website | `https://example.org` | SECURITY.md |
+| `https://github.com/hyperpolymath/Apodeixis.jl` | Project website | `https://example.org` | SECURITY.md |
 | `j.d.a.jewell@open.ac.uk` | Conduct reports email | `conduct@example.org` | CODE_OF_CONDUCT.md |
 | `Code of Conduct Committee` | Conduct committee name | `Code of Conduct Committee` | CODE_OF_CONDUCT.md |
 | `48 hours` | SLA for initial response | `48 hours` | CODE_OF_CONDUCT.md |

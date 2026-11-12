@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
-= AFFIRMATION — apodeixis.jl, as of <YYYY-MM-DD>
+= AFFIRMATION — Apodeixis.jl, as of <YYYY-MM-DD>
 :toc: macro
 :toclevels: 2
 :std-docs: https://github.com/hyperpolymath/standards/blob/main/docs
@@ -38,7 +38,7 @@ toc::[]
 == What this is, and how it works
 
 *What it is.* A short, dated, signed snapshot of what hyperpolymath can honestly and
-verifiably claim about *apodeixis.jl* at one exact commit. Nothing here is
+verifiably claim about *Apodeixis.jl* at one exact commit. Nothing here is
 marketing and nothing is a promise about the future — those live in the README.
 This file is the receipt.
 
@@ -95,10 +95,10 @@ file. Bring a counter-example, a failing run, or a contradicting source.
 | Field | Value
 
 | Project
-| apodeixis.jl
+| Apodeixis.jl
 
 | Repo
-| `hyperpolymath/apodeixis.jl`
+| `hyperpolymath/Apodeixis.jl`
 
 | Branch
 | `main`
@@ -107,7 +107,7 @@ file. Bring a counter-example, a failing run, or a contradicting source.
 | `<full 40-character SHA — never abbreviated, never a tag>`
 
 | Permalink
-| https://github.com/hyperpolymath/apodeixis.jl/tree/<full 40-character SHA>
+| https://github.com/hyperpolymath/Apodeixis.jl/tree/<full 40-character SHA>
 
 | Verified (UTC)
 | `<ISO-8601 with the Z suffix, e.g. 2026-09-09T00:52:11Z>`
@@ -193,8 +193,8 @@ to prevent — mark it refuted and say what refuted it.
 
 [source,bash]
 ----
-git clone https://github.com/hyperpolymath/apodeixis.jl
-cd apodeixis.jl
+git clone https://github.com/hyperpolymath/Apodeixis.jl
+cd Apodeixis.jl
 git checkout <full 40-character SHA>
 # <the exact commands, in order, with their expected output>
 ----

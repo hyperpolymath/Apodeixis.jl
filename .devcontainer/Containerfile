@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
 #
-# Dev Container image for apodeixis.jl
+# Dev Container image for Apodeixis.jl
 # Base: Chainguard Wolfi (minimal, supply-chain-secure)
 # Build: podman build -t apodeixis.jl-dev -f .devcontainer/Containerfile .
 # `:latest` suits a dev container (rebuilt daily); pin by digest
@@ -44,7 +44,7 @@ RUN set -eu; \
 # devcontainer.json maps your host user onto it with --userns=keep-id.
 
 # Set workspace directory
-WORKDIR /workspaces/apodeixis.jl
+WORKDIR /workspaces/Apodeixis.jl
 
 # Default shell
 ENV SHELL=/bin/bash

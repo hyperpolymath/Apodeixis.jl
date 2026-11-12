@@ -90,7 +90,7 @@ let base    = import "../_base.ncl" in
       signed_by = {
         user = "Jonathan D.A. Jewell",
         date = "2026-04-18",
-        context = "dust trident — canonical template in apodeixis.jl. Specialises in audit-trail preservation + rollback-path verification. Yard tier with destructive-action gating (dry-run default; --apply + per-item approval required for mutations). Copy this trident into a new repo and describe how it actually rolls back or retires behaviour.",
+        context = "dust trident — canonical template in Apodeixis.jl. Specialises in audit-trail preservation + rollback-path verification. Yard tier with destructive-action gating (dry-run default; --apply + per-item approval required for mutations). Copy this trident into a new repo and describe how it actually rolls back or retires behaviour.",
       },
       history = [
         { date = "2026-04-18", event = "trident-born", note = "Dustfile.a2ml and dust.ncl pre-existed. This manifest + dust.k9.ncl complete the trident and the full verb set. All 6 verbs now on trident shape: intend (Hunt, reporting), trust (Hunt, blocking), must (Hunt-read-only, blocking), bust (Hunt-read-only, blocking), adjust (Yard, advisory), dust (Yard, advisory)." },
@@ -109,8 +109,8 @@ let base    = import "../_base.ncl" in
   # Read by .machine_readable/coaptation/extract-clauses.sh.
   # -------------------------------------------------------------------
   declaration = {
-    preamble = "# SPDX-License-Identifier: MPL-2.0\n# Dustfile — Cleanup and hygiene contract for apodeixis.jl\n# Author: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>\n#\n# Paired runner: dust.ncl\n# Verb:          dust\n# Semantics:     What should be cleaned up. Housekeeping, not blockers.\n#\n# This repository: apodeixis.jl is the canonical template.\n# Cleanup items here ensure the template itself remains pristine.\n",
-    abstract = "Cleanup and hygiene items for apodeixis.jl. These are maintenance tasks\nthat ensure the template repository remains clean and ready for distribution\nto new repositories.",
+    preamble = "# SPDX-License-Identifier: MPL-2.0\n# Dustfile — Cleanup and hygiene contract for Apodeixis.jl\n# Author: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>\n#\n# Paired runner: dust.ncl\n# Verb:          dust\n# Semantics:     What should be cleaned up. Housekeeping, not blockers.\n#\n# This repository: Apodeixis.jl is the canonical template.\n# Cleanup items here ensure the template itself remains pristine.\n",
+    abstract = "Cleanup and hygiene items for Apodeixis.jl. These are maintenance tasks\nthat ensure the template repository remains clean and ready for distribution\nto new repositories.",
     prose = [
     ],
     removal_candidates = [
@@ -156,10 +156,10 @@ let base    = import "../_base.ncl" in
       {
         id = "no-stale-template-references",
         section = "Template Hygiene",
-        description = "No references to apodeixis.jl in generic template files",
-        probe = "test -z \"$(grep -r 'apodeixis.jl' machine-readable-design/ 2>/dev/null)\"",
+        description = "No references to Apodeixis.jl in generic template files",
+        probe = "test -z \"$(grep -r 'Apodeixis.jl' machine-readable-design/ 2>/dev/null)\"",
         severity = 'warning,
-        notes = "Generic templates should use apodeixis.jl or similar placeholders",
+        notes = "Generic templates should use Apodeixis.jl or similar placeholders",
       },
       {
         id = "version-sync-checked",

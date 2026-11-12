@@ -10,5 +10,5 @@
 Contact: mailto:j.d.a.jewell@open.ac.uk
 Expires: 2026-12-31T23:59:59.000Z
 Preferred-Languages: en
-Canonical: https://github.com/hyperpolymath/apodeixis.jl/.well-known/security.txt
-Policy: https://github.com/hyperpolymath/apodeixis.jl/blob/main/.github/SECURITY.md
+Canonical: https://github.com/hyperpolymath/Apodeixis.jl/.well-known/security.txt
+Policy: https://github.com/hyperpolymath/Apodeixis.jl/blob/main/.github/SECURITY.md

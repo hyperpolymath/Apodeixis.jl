@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 // Template: QUICKSTART-MAINTAINER.adoc — packaging, deploying, and maintaining
-// Replace apodeixis.jl, UNASSIGNED, UNASSIGNED with actuals
-= apodeixis.jl — Quick Start for Platform Maintainers
+// Replace Apodeixis.jl, UNASSIGNED, UNASSIGNED with actuals
+= Apodeixis.jl — Quick Start for Platform Maintainers
 :toc:
 :toclevels: 2
 
 == Overview
 
-This guide covers packaging, deploying, and maintaining apodeixis.jl for
+This guide covers packaging, deploying, and maintaining Apodeixis.jl for
 distribution on your platform.
 
 == Runtime Dependencies
@@ -19,8 +19,8 @@ UNASSIGNED
 
 [source,bash]
 ----
-git clone https://github.com/hyperpolymath/apodeixis.jl.git
-cd apodeixis.jl
+git clone https://github.com/hyperpolymath/Apodeixis.jl.git
+cd Apodeixis.jl
 just build-release
 ----
 
@@ -119,5 +119,5 @@ Each instance has isolated config, data, and logs.
 
 == Reporting Issues
 
-* Upstream: https://github.com/hyperpolymath/apodeixis.jl/issues
+* Upstream: https://github.com/hyperpolymath/Apodeixis.jl/issues
 * With diagnostic: `just help-me` (pre-fills context)

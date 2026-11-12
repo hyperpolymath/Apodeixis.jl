@@ -62,7 +62,7 @@ The file must contain exactly three sections:
 Add a header comment with SPDX-License-Identifier and Last updated date.
 End with an "Update Protocol" section explaining how to maintain the file.
 
-Use the template at TOPOLOGY.md in apodeixis.jl as a structural reference,
+Use the template at TOPOLOGY.md in Apodeixis.jl as a structural reference,
 but make the content completely specific to THIS project.
 ----
 
@@ -70,7 +70,7 @@ but make the content completely specific to THIS project.
 
 [source,bash]
 ----
-cp /path/to/apodeixis.jl/TOPOLOGY.md ./TOPOLOGY.md
+cp /path/to/Apodeixis.jl/TOPOLOGY.md ./TOPOLOGY.md
 # Then edit: replace placeholders, draw the real architecture, fill the dashboard
 ----
 

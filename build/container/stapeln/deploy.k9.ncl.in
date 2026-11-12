@@ -1,6 +1,6 @@
 K9!
 # SPDX-License-Identifier: MPL-2.0
-# deploy.k9.ncl — apodeixis.jl deployment component (Hunt level)
+# deploy.k9.ncl — Apodeixis.jl deployment component (Hunt level)
 #
 # k9-svc deployment component, K9 contract v1.0.0 (D173). Shipped as
 # deploy.k9.ncl.in because a template is not a component: `just repo-init`
@@ -27,7 +27,7 @@ K9!
     metadata = {
       name = "apodeixis.jl-deploy",
       version = "0.1.0",
-      description = "apodeixis.jl deployment component (Hunt level)",
+      description = "Apodeixis.jl deployment component (Hunt level)",
     },
 
     # Target environment (extension field; contract §5.5).
