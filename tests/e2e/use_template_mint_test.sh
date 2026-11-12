@@ -201,9 +201,18 @@ g -C "$C" diff --quiet -- docs/architecture/REPOSITORY-MAP.adoc \
 # commit, after a removal), reproduces the stale map lintel shipped.
 SM="$work/stale-map"
 use_template "$SM"
-(cd "$SM" && rm -rf archetypes && bash scripts/gen-repo-map.sh . >/dev/null)
-grep -q '^| `archetypes' "$SM/docs/architecture/REPOSITORY-MAP.adoc" \
+# Create the control explicitly: minted descendants no longer carry archetypes/.
+# The assertion must test index staleness, not assume a template-only directory.
+printf 'map staleness control\n' > "$SM/map-staleness-control.txt"
+g -C "$SM" add map-staleness-control.txt
+rm "$SM/map-staleness-control.txt"
+(cd "$SM" && bash scripts/gen-repo-map.sh . >/dev/null)
+grep -qF 'map-staleness-control.txt' "$SM/docs/architecture/REPOSITORY-MAP.adoc" \
     || fail 'control: index mode no longer shows the pre-commit staleness; this check is vacuous'
+(cd "$SM" && bash scripts/gen-repo-map.sh --worktree . >/dev/null)
+if grep -qF 'map-staleness-control.txt' "$SM/docs/architecture/REPOSITORY-MAP.adoc"; then
+    fail 'control: worktree mode retained a deleted source'
+fi
 pass "the committed map is fresh (the index-mode control reproduces lintel's stale map)"
 
 (cd "$C" && env -u GITHUB_REPOSITORY bash scripts/check-no-placeholders.sh .) > "$work/ph.log" 2>&1 \

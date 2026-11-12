@@ -49,18 +49,18 @@ for file in "${files[@]}"; do
 done
 echo 'PASS: all three configs are canonical KYAML; block-style drift is distinguishable without data loss'
 
-assert_value "$template" '.services | keys | sort' '["rokur","svalinn","{{SERVICE_NAME}}"]' 'template service names'
-assert_value "$template" '.services."{{SERVICE_NAME}}".image' '"{{REGISTRY}}/{{SERVICE_NAME}}:latest"' 'quoted image placeholders'
-assert_value "$template" '.services."{{SERVICE_NAME}}".ports' '["{{PORT}}:{{PORT}}"]' 'quoted port placeholders'
-assert_value "$template" '.services."{{SERVICE_NAME}}".build' '{"context":"..","dockerfile":"build/container/Containerfile"}' 'template application build paths'
-assert_value "$template" '.services."{{SERVICE_NAME}}".environment' '{"APP_HOST":"[::]","APP_PORT":"{{PORT}}","APP_LOG_FORMAT":"json","APP_DATA_DIR":"/data"}' 'template application environment and IPv6 listener'
-assert_value "$template" '.services."{{SERVICE_NAME}}".volumes' '["{{SERVICE_NAME}}-data:/data"]' 'template application data mount'
-assert_value "$template" '.services."{{SERVICE_NAME}}".healthcheck.test' '["CMD","curl","-sf","http://localhost:{{PORT}}/health"]' 'template health command placeholders'
-assert_value "$template" '.services."{{SERVICE_NAME}}".healthcheck.start_period' '"10s"' 'application startup grace period'
+assert_value "$template" '.services | keys | sort' '["rokur","svalinn","apodeixis.jl"]' 'template service names'
+assert_value "$template" '.services."apodeixis.jl".image' '"ghcr.io/hyperpolymath/apodeixis.jl:latest"' 'quoted image placeholders'
+assert_value "$template" '.services."apodeixis.jl".ports' '["8080:8080"]' 'quoted port placeholders'
+assert_value "$template" '.services."apodeixis.jl".build' '{"context":"..","dockerfile":"build/container/Containerfile"}' 'template application build paths'
+assert_value "$template" '.services."apodeixis.jl".environment' '{"APP_HOST":"[::]","APP_PORT":"8080","APP_LOG_FORMAT":"json","APP_DATA_DIR":"/data"}' 'template application environment and IPv6 listener'
+assert_value "$template" '.services."apodeixis.jl".volumes' '["apodeixis.jl-data:/data"]' 'template application data mount'
+assert_value "$template" '.services."apodeixis.jl".healthcheck.test' '["CMD","curl","-sf","http://localhost:8080/health"]' 'template health command placeholders'
+assert_value "$template" '.services."apodeixis.jl".healthcheck.start_period' '"10s"' 'application startup grace period'
 assert_value "$template" '.services.rokur.environment.ROKUR_REQUIRED_SECRETS' '""' 'empty secret list remains an empty string'
-assert_value "$template" '.services.rokur.depends_on."{{SERVICE_NAME}}".condition' '"service_healthy"' 'health-gated template backend'
+assert_value "$template" '.services.rokur.depends_on."apodeixis.jl".condition' '"service_healthy"' 'health-gated template backend'
 assert_value "$template" '.services.svalinn.depends_on' '["rokur"]' 'template gateway waits for the secrets proxy'
-assert_value "$template" '.volumes | keys | sort' '["rokur-audit","{{SERVICE_NAME}}-data"]' 'template volume names'
+assert_value "$template" '.volumes | keys | sort' '["rokur-audit","apodeixis.jl-data"]' 'template volume names'
 
 for file in "$template" "$example"; do
     assert_value "$file" '.services.svalinn.ports' '["443:443","80:80"]' 'gateway port mappings remain strings'
@@ -109,8 +109,8 @@ echo 'PASS: Compose topology, mount paths, health dependencies, and YAML scalar 
 # Low/high port boundaries and a registry with a port catch quoting regressions.
 for port in 1 65535; do
     for file in "$template" "$policy"; do
-        sed -e 's|{{SERVICE_NAME}}|demo-api|g' -e "s|{{PORT}}|$port|g" \
-            -e 's|{{REGISTRY}}|registry.example.test:5000/team|g' "$file" > "$scratch/$(basename "$file")"
+        sed -e 's|apodeixis.jl|demo-api|g' -e "s|8080|$port|g" \
+            -e 's|ghcr.io/hyperpolymath|registry.example.test:5000/team|g' "$file" > "$scratch/$(basename "$file")"
     done
     minted="$scratch/compose.yaml"
     assert_value "$minted" '.services | keys | sort' '["demo-api","rokur","svalinn"]' 'minted service key'
@@ -135,7 +135,7 @@ assert_value "$policy" '.auth.authenticated' '[{"path":"/api/v1/*","methods":["G
 assert_value "$policy" '.rate_limits.global' '{"requests_per_second":500,"burst":1000}' 'numeric global rate limits'
 assert_value "$policy" '.rate_limits.writes' '{"paths":["/api/v1/*"],"methods":["POST","PUT","DELETE"],"requests_per_second":100,"burst":200}' 'stricter write limits and path glob'
 assert_value "$policy" '.trust.required_attestations' '["source-signature","sbom-complete"]' 'required container attestations'
-assert_value "$policy" '.trust.trusted_signers' '[{"key_id":"{{SERVICE_NAME}}-release","algorithm":"Ed25519","public_key_file":"/etc/svalinn/keys/{{SERVICE_NAME}}-release.pub"}]' 'only the project release signer is trusted'
+assert_value "$policy" '.trust.trusted_signers' '[{"key_id":"apodeixis.jl-release","algorithm":"Ed25519","public_key_file":"/etc/svalinn/keys/apodeixis.jl-release.pub"}]' 'only the project release signer is trusted'
 assert_value "$policy" '.trust.reject_unsigned' 'true' 'unsigned containers are rejected with a boolean'
 assert_value "$policy" '.validation' '{"max_body_size":"8MB","reject_nan_inf":true,"max_result_limit":500}' 'request validation limits and boolean'
 assert_value "$policy" '.cors' '{"allow_origins":["*"],"allow_methods":["GET","POST","PUT","DELETE","OPTIONS"],"allow_headers":["Content-Type","Authorization"],"max_age":3600}' 'CORS wildcard is a string, with numeric max age'

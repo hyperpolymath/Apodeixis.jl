@@ -30,5 +30,4 @@ tests/e2e/use_template_mint_test.sh        # mints a template copy: template lit
 tests/workflows/mint_cleanup_test.sh       # instruction-block fixture
 tests/workflows/self_name_pass_test.sh     # template-name fixtures
 tests/workflows/template_conformance_test.sh  # template-slug fixtures
-tests/workflows/julia_library_test.sh      # PACKAGE_UUID brace-token fixture
 tests/workflows/resolve_template_pin_test.sh  # template-slug fixtures

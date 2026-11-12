@@ -81,6 +81,10 @@ predecessors did.
 | yes
 | -
 
+| `Apodeixis.jl_chora.deed`
+| yes
+| the repo deed: universal AI entry point; family-7 allocation manifest + ply tree folded in (standards#837 pilot). Filename carries the repo slug (deed dispatch <stem>_chora.deed), so repo-init renames it at mint
+
 | `CHANGELOG.adoc`
 | yes
 | AsciiDoc is the estate-standard documentation format
@@ -121,10 +125,6 @@ predecessors did.
 | yes
 | -
 
-| `archetypes/`
-| optional
-| template-only variation seam (ADR-0003); `just repo-init` removes it from minted repos
-
 | `benches/`
 | optional
 | Cargo-conventional at package root
@@ -164,10 +164,6 @@ predecessors did.
 | `mise.toml`
 | yes
 | the toolchain: every tool at latest (PROVISIONING-STANDARD §4)
-
-| `rsr-template-repo_chora.deed`
-| yes
-| the repo deed: universal AI entry point; family-7 allocation manifest + ply tree folded in (standards#837 pilot). Filename carries the repo slug (deed dispatch <stem>_chora.deed), so repo-init renames it at mint
 
 | `scripts/`
 | yes
