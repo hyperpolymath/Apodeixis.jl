@@ -173,7 +173,7 @@ https://semver.org/spec/v2.0.0.html[Semantic Versioning].
   `relock-standards-pin.sh` at `75bd599` gave the nine records the same tags.
   No commit changes: each tag was checked to point at its recorded commit.
 * The mint's self-name pass keeps issue references. It rewrote
-  `rsr-template-repo#N`, a reference to this template's own issue, into
+  `apodeixis.jl#N`, a reference to this template's own issue, into
   `<child>#N`, which names an issue of the child that does not exist or is
   unrelated. resource-algebra carried such references after its mint.
   `tests/workflows/self_name_pass_test.sh` (wired into Estate Rules) runs
