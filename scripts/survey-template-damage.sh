@@ -17,7 +17,7 @@
 #
 # Usage:
 #   scripts/survey-template-damage.sh hyperpolymath/A.jl hyperpolymath/B.jl …
-#   scripts/survey-template-damage.sh --from-search 'org:hyperpolymath filename:Justfile "{{PROJECT_NAME}}"'
+#   scripts/survey-template-damage.sh --from-search 'org:hyperpolymath filename:Justfile "Apodeixis.jl"'
 #   options: --keep (leave the clones), --tsv (machine-readable table only)
 #
 # Exit: 0 survey completed (whatever it found); 1 could not complete; 2 usage.

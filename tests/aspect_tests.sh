@@ -101,7 +101,7 @@ fi
 # Aspect 3: ABI/FFI contract. The Idris2 side and the Zig side name the same
 # symbols, the same library and the same Result codes. Text-level: it reads
 # the two sources, not a built library, and checks names and integer codes,
-# not types. Symbol names may still carry the {{project}} token before
+# not types. Symbol names may still carry the apodeixis_jl token before
 # `just repo-init`; both sides carry it alike, so they compare equal.
 # ═══════════════════════════════════════════════════════════════════════
 bold "Aspect 3: ABI/FFI contract"

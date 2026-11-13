@@ -13,7 +13,7 @@ not performed — see <<Remediation>>.
 `JuliaPackageSpitter.jl` was reported as a broken Julia package: a `mise.toml`
 declaring Python, Node, Go, Rust, Java, Bun and Cargo for a Julia library and no
 Julia; a `Containerfile` built from two floating `:latest` stages and otherwise
-consisting of TODO comments; `{{PROJECT_NAME}}` and a `tier` token sitting in
+consisting of TODO comments; `Apodeixis.jl` and a `tier` token sitting in
 committed files; an SPDX gate that passed without reading a single file; a
 `Justfile` whose `fmt`, `fmt-check` and `lint` recipes are `@echo` statements, so
 `just quality` printed "All quality checks passed!" having run only `Pkg.test()`.
@@ -86,7 +86,7 @@ anywhere, in any repository, for two months.
 
 The placeholder gate excludes `Justfile` and `*.just` (they contain just's own
 `{{...}}` interpolation), and the mint's token list is a fixed set. Between the
-two, `Justfile project := "{{PROJECT_NAME}}"`, `tier := "…"` (the `tier` brace token),
+two, `Justfile project := "Apodeixis.jl"`, `tier := "…"` (the `tier` brace token),
 `.envrc`, `.reuse/dep5`, `Containerfile`, `devcontainer.json` and
 `.devcontainer/Containerfile` kept their braces all the way into commits.
 
@@ -320,7 +320,7 @@ four gates against the clone — the same code a minted repository will run, not
 grep. Reproducible:
 
 ----
-gh api -X GET search/code -f q='org:hyperpolymath "{{PROJECT_NAME}}"' \
+gh api -X GET search/code -f q='org:hyperpolymath "Apodeixis.jl"' \
   --jq '[.items[].repository.full_name] | unique | .[]'
 scripts/survey-template-damage.sh --tsv owner/name owner/name …
 ----
@@ -332,13 +332,13 @@ separate query, so the populations overlap and none is a subset of another):
 |===
 | Query | Files | What it establishes
 
-| `org:hyperpolymath "{{PROJECT_NAME}}"` | 1536 | Unfilled tokens are not one
+| `org:hyperpolymath "Apodeixis.jl"` | 1536 | Unfilled tokens are not one
   repository's accident.
 | `org:hyperpolymath filename:mise.toml python` | 175 | 175 `mise.toml` files
   mention Python. Python is banned estate-wide.
 | `org:hyperpolymath filename:Containerfile ":latest"` | 421 | 421 `Containerfile`
   files carry a floating tag somewhere.
-| `org:hyperpolymath filename:Justfile "{{PROJECT_NAME}}"` | 33 | The mint's
+| `org:hyperpolymath filename:Justfile "Apodeixis.jl"` | 33 | The mint's
   own skipped-file class, in 33 `Justfile`s.
 |===
 

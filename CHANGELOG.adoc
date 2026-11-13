@@ -384,7 +384,7 @@ https://semver.org/spec/v2.0.0.html[Semantic Versioning].
    mise tools rather than each language's binaries;
 ** `check-mint-tokens.sh` treated "no build/just/repo-init.just" as proof of a
    minted tree — but that recipe is carried verbatim into every child, so no child
-   was ever recognised and an unfilled `{{PROJECT_NAME}}` passed (and
+   was ever recognised and an unfilled `Apodeixis.jl` passed (and
    `survey-template-damage.sh` reported such repositories token-clean). The marker
    is `archetypes/`, which the mint deletes;
 ** `archetypes/*/prune.txt` dropped only `build/container/`, so a minted Julia

@@ -10,11 +10,11 @@
 # A token with no answer is not a reminder, it is a defect that ships. Measured
 # downstream: a minted Julia repo carried
 #
-#     Justfile         project := "{{PROJECT_NAME}}"   tier := "{{tier}}"
-#     .envrc           PROJECT_NAME="{{PROJECT_NAME}}"  RSR_TIER="infrastructure"
-#     .reuse/dep5      Upstream-Name: {{PROJECT_NAME}}
-#     Containerfile    # Copyright (c) ... ({{OWNER}})
-#     devcontainer.json, .devcontainer/Containerfile  {{PROJECT_NAME}}
+#     Justfile         project := "Apodeixis.jl"   tier := "{{tier}}"
+#     .envrc           PROJECT_NAME="Apodeixis.jl"  RSR_TIER="infrastructure"
+#     .reuse/dep5      Upstream-Name: Apodeixis.jl
+#     Containerfile    # Copyright (c) ... (hyperpolymath)
+#     devcontainer.json, .devcontainer/Containerfile  Apodeixis.jl
 #
 # because the mint had no answer for those tokens IN THOSE FILES, and nothing
 # checked. The repo's own `check-no-placeholders.sh` would have caught it — in
@@ -73,7 +73,7 @@ if [ ! -d "$ROOT/archetypes" ]; then
     # (.machine_readable/mint-verbatim.txt) and the child's Justfile imports it,
     # so testing for the recipe never fired: children looked like the template,
     # every token they carried counted as "the generator will answer this", and
-    # an unfilled {{PROJECT_NAME}} passed — in the gate and in
+    # an unfilled Apodeixis.jl passed — in the gate and in
     # survey-template-damage.sh, which reads it.
     #
     # archetypes/ is the marker because the mint deletes it (repo-init's prune
@@ -107,7 +107,7 @@ ANSWERS=""
 # command substitutions (tests, the mint's pre-write gate), where a PID-named
 # temp file is shared by the outer and inner shell often enough to hand one of
 # them a half-written list — measured as an intermittent "the mint cannot
-# answer {{PROJECT_NAME}}" on a tree where it demonstrably can.
+# answer Apodeixis.jl" on a tree where it demonstrably can.
 if [ "$MINTED_TREE" -eq 1 ]; then
     info "no archetypes/ — minted tree; no token has an answer here"
 else
