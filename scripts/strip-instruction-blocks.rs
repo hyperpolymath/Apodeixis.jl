@@ -14,6 +14,8 @@
 //
 // Usage: strip-instruction-blocks.rs FILE...   or   ... - < newline-separated paths
 
+#![forbid(unsafe_code)]
+
 use std::env;
 use std::fs;
 use std::io::{self, Read};

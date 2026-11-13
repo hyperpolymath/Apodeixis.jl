@@ -12,7 +12,7 @@ trap 'rm -rf "$scratch"' EXIT
 workflow="$repo/.github/workflows/estate-rules.yml"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-install_name='Install verified yq 4.53.3 and kyaml-format.sh (standards 75bd599)'
+install_name='Install verified yq 4.53.3 and kyaml-format.sh (standards 8e48b1c)'
 gate_name='Converted YAML stays KYAML'
 export install_name gate_name
 for step_name in "$install_name" "$gate_name"; do
@@ -64,7 +64,7 @@ case "$url" in
     https://github.com/mikefarah/yq/releases/download/v4.53.3/yq_linux_amd64)
         asset=yq
         [[ "$output" = "$RUNNER_TEMP/yq-bin/yq" ]] || exit 92 ;;
-    https://raw.githubusercontent.com/hyperpolymath/standards/75bd5994470661a099df562d6d5ad2fe744dbd66/scripts/kyaml-format.sh)
+    https://raw.githubusercontent.com/metadatastician/standards/f0b3cd4c464d33e1584f8528c17bce104555e256/scripts/kyaml-format.sh)
         asset=kyaml-format.sh
         [[ "$output" = "$RUNNER_TEMP/kyaml-format.sh" ]] || exit 92 ;;
     *) echo "unexpected download: $url" >&2; exit 93 ;;
@@ -250,3 +250,7 @@ run_install sha256:yq 1 $'curl:yq\nsha256:yq'
 run_install curl:kyaml-format.sh 22 $'curl:yq\nsha256:yq\ncurl:kyaml-format.sh'
 run_install sha256:kyaml-format.sh 1 "$all_events"
 echo 'PASS: each failed download or checksum stops installation and cannot report success'
+
+# The local formatter is part of PR #253's ratchet; exercise its byte/data
+# preservation controls as well as the workflow download/dispatch controls.
+bash "$repo/tests/workflows/kyaml_format_test.sh"

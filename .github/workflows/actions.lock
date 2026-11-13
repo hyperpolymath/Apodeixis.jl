@@ -7,15 +7,18 @@ workflows:
         - 'actions/checkout@v7.0.1'
     '.github/workflows/codeql.yml':
         - 'actions/checkout@v7.0.1'
-        - 'github/codeql-action@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee'
+        - 'github/codeql-action@9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
     '.github/workflows/dependabot-automerge.yml':
-        - 'dependabot/fetch-metadata@v3.1.0'
+        - 'dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98'
     '.github/workflows/docker-build.yml':
         - 'actions/checkout@v7.0.1'
     '.github/workflows/dogfood-gate.yml':
-        - 'actions/checkout@v7.0.1'
-        - 'actions/download-artifact@v8.0.2'
-        - 'erlef/setup-beam@v1.24.1'
+        - 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333'
+        - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
+        - 'erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124'
+        - 'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6'
     '.github/workflows/dogfood-summary.yml':
         - 'actions/checkout@v7.0.1'
     '.github/workflows/dot-wellknown-enforcement.yml':
@@ -25,22 +28,35 @@ workflows:
     '.github/workflows/empty-linter.yml':
         - 'actions/checkout@v7.0.1'
     '.github/workflows/estate-rules.yml':
-        - 'actions/checkout@v7.0.1'
-    '.github/workflows/governance.yml': []
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+    '.github/workflows/fork-governance.yml':
+        - 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333'
+        - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
+        - 'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6'
+    '.github/workflows/governance.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
     '.github/workflows/groove-check.yml':
         - 'actions/checkout@v7.0.1'
     '.github/workflows/guix-policy.yml':
         - 'actions/checkout@v7.0.1'
     '.github/workflows/hypatia-scan.yml':
-        - 'actions/download-artifact@v8.0.2'
+        - 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
+        - 'erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124'
+        - 'github/codeql-action@9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
     '.github/workflows/julia.yml':
         - 'actions/checkout@v7.0.1'
         - 'julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687'
     '.github/workflows/label-triage.yml': []
     '.github/workflows/labels.yml': []
     '.github/workflows/lock-sync-gate.yml': []
-    '.github/workflows/main-estate-audit.yml': []
-    '.github/workflows/mirror.yml': []
+    '.github/workflows/main-estate-audit.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+    '.github/workflows/mirror.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
     '.github/workflows/ossf-best-practices.yml':
         - 'actions/checkout@v7.0.1'
     '.github/workflows/pages.yml':
@@ -50,11 +66,15 @@ workflows:
         - 'actions/deploy-pages@v5.0.1'
         - 'actions/upload-pages-artifact@v5.0.0'
         - 'haskell-actions/setup@v2.12.1'
+    '.github/workflows/proven-tests.yml':
+        - 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6'
     '.github/workflows/push-email-notify.yml':
         - 'hyperpolymath/smtp-notify-action@v0.5.1'
     '.github/workflows/quality.yml':
-        - 'actions/checkout@v7.0.1'
-        - 'editorconfig-checker/action-editorconfig-checker@v3.0.0'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'editorconfig-checker/action-editorconfig-checker@51f63319f592f97930c73d9c46184d20bd206393'
     '.github/workflows/release.yml':
         - 'actions/attest-build-provenance@v4.2.2'
         - 'actions/checkout@v7.0.1'
@@ -62,19 +82,27 @@ workflows:
         - 'softprops/action-gh-release@v3.0.4'
     '.github/workflows/rsr-compliance-canary.yml':
         - 'actions/checkout@v7.0.1'
-    '.github/workflows/rust-ci.yml': []
-    '.github/workflows/scorecard.yml': []
-    '.github/workflows/secret-scanner.yml': []
+    '.github/workflows/rust-ci.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+    '.github/workflows/scorecard.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'github/codeql-action@9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
+        - 'ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e'
+    '.github/workflows/secret-scanner.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
     '.github/workflows/security-policy.yml':
-        - 'actions/checkout@v7.0.1'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
     '.github/workflows/sonarqube.yml':
         - 'actions/checkout@v7.0.1'
         - 'sonarsource/sonarqube-scan-action@v8.4.1'
+    '.github/workflows/squabble.yml': []
     '.github/workflows/static-analysis-gate.yml':
-        - 'actions/checkout@v7.0.1'
-        - 'actions/download-artifact@v8.0.2'
-        - 'actions/upload-artifact@v7.0.2'
-        - 'erlef/setup-beam@v1.24.1'
+        - 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333'
+        - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
+    '.github/workflows/verdict-grid-publish.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
     '.github/workflows/workflow-linter.yml':
         - 'actions/checkout@v7.0.1'
 dependencies:
@@ -90,11 +118,21 @@ dependencies:
         commit: 'sha1-508db95dd578ae2727ebd6217d5ba78e4fbda05d'
         owner_id: 44036562
         repo_id: 760701061
+    'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9':
+        ref: 'v6.1.0'
+        commit: 'sha1-55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
+        owner_id: 44036562
+        repo_id: 215566462
     'actions/cache@v6.1.0':
         ref: 'v6.1.0'
         commit: 'sha1-55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
         owner_id: 44036562
         repo_id: 215566462
+    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1':
+        ref: 'v7.0.1'
+        commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
+        owner_id: 44036562
+        repo_id: 197814629
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'
         commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
@@ -110,7 +148,7 @@ dependencies:
         commit: 'sha1-368f82528645a54fb793d4d04e342629a3f51346'
         owner_id: 44036562
         repo_id: 438112499
-    'actions/download-artifact@v8.0.2':
+    'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333':
         ref: 'v8.0.2'
         commit: 'sha1-9000827ccba6bdab643e8b6fd33ac0654aef8333'
         owner_id: 44036562
@@ -118,6 +156,11 @@ dependencies:
     'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f':
         ref: 'v7.0.0'
         commit: 'sha1-bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
+        owner_id: 44036562
+        repo_id: 192625955
+    'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9':
+        ref: 'v7.0.2'
+        commit: 'sha1-cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         owner_id: 44036562
         repo_id: 192625955
     'actions/upload-artifact@v7.0.2':
@@ -132,24 +175,24 @@ dependencies:
         repo_id: 496012378
         uses:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
-    'dependabot/fetch-metadata@v3.1.0':
+    'dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98':
         ref: 'v3.1.0'
         commit: 'sha1-25dd0e34f4fe68f24cc83900b1fe3fe149efef98'
         owner_id: 27347476
         repo_id: 371068214
-    'editorconfig-checker/action-editorconfig-checker@v3.0.0':
+    'editorconfig-checker/action-editorconfig-checker@51f63319f592f97930c73d9c46184d20bd206393':
         ref: 'v3.0.0'
         commit: 'sha1-51f63319f592f97930c73d9c46184d20bd206393'
         owner_id: 26415196
         repo_id: 297874902
-    'erlef/setup-beam@v1.24.1':
+    'erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124':
         ref: 'v1.24.1'
         commit: 'sha1-54075bcc5e249e4758d363f27d099f55d843f124'
         owner_id: 47606891
         repo_id: 331103973
-    'github/codeql-action@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee':
-        ref: 'v4.39.0'
-        commit: 'sha1-6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee'
+    'github/codeql-action@9b3254085494b55a0f7c4c2b3d2d52cc712ce370':
+        ref: 'v4.39.1'
+        commit: 'sha1-9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
         owner_id: 9919
         repo_id: 259445878
     'haskell-actions/setup@v2.12.1':
@@ -167,6 +210,16 @@ dependencies:
         commit: 'sha1-da908477b5db94c10ffce8cfea9f2b3b9d5db687'
         owner_id: 53965732
         repo_id: 202020219
+    'ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e':
+        ref: 'v2.5.0'
+        commit: 'sha1-fa7117db83c52d787ae5a89f350999701505d78e'
+        owner_id: 67707773
+        repo_id: 421101922
+    'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6':
+        ref: 'v2.2.0'
+        commit: 'sha1-0c5077e51419868618aeaa5fe8019c62421857d6'
+        owner_id: 108928776
+        repo_id: 512644635
     'softprops/action-gh-release@v3.0.4':
         ref: 'v3.0.4'
         commit: 'sha1-8a0cd651e5b2365bd640854a3fa5dfc70e4875f3'
