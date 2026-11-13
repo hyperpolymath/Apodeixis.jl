@@ -53,3 +53,10 @@ research_extensions/RE005:.github/workflows/static-analysis-gate.yml
 # Dependabot workflow uses the unprivileged pull_request event and also verifies
 # github.event.pull_request.user.login, so that threat model does not apply.
 research_extensions/RE008:.github/workflows/dependabot-automerge.yml
+
+# wrong_sha_pin compares 40-hex action pins against Hypatia's static May-2026
+# @sha_pins table (e.g. actions/checkout@v4 vs the current actions/checkout@v7.0.1
+# and ossf/scorecard-action@v2.5.0). Authoritative pin verification is enforced by
+# .github/workflows/actions.lock + scripts/check-lock-sync.sh + GitHub's native
+# lockfile verifier on every workflow run.
+workflow_audit/wrong_sha_pin:.github/workflows/
