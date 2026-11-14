@@ -21,3 +21,4 @@ shellcheck = "latest"
 yq = "latest"             # scripts/kyaml-format.sh (KYAML configs)
 trivy = "latest"          # just deps-audit
 zig = "latest"
+julia = "latest"          # the package under test (Project.toml); mise.lock needs `just toolchain-refresh`
