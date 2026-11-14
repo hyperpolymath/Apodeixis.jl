@@ -131,6 +131,15 @@ function renderBadge(label, state) {
     );
 }
 
+// LEGACY_LABELS - labels an earlier renderer wrote for a lane, per current label.
+// A file on the badges branch carrying one of these (and otherwise a valid
+// shield badge) is a known predecessor of this lane's badge, so it is
+// migrated (replaced with the canonical badge) rather than refused as foreign.
+// Any other label stays a refusal. The old K9 lane was labelled "k9-deed L0" + U+2013 + "L2".
+const LEGACY_LABELS = Object.freeze({
+    K9: Object.freeze(["k9-deed L0\u2013L2"]),
+});
+
 // inspectBadge - is this text a shield-endpoint object?
 //
 //   pairing: "strict"  message must be one of STATE_TABLE's, with exactly the
@@ -158,7 +167,13 @@ function inspectBadge(text, label, { pairing = "strict" } = {}) {
     if (badge.schemaVersion !== 1) {
         errors.push(`schemaVersion is ${JSON.stringify(badge.schemaVersion)}, expected 1`);
     }
-    if (label !== undefined && badge.label !== label) {
+    // Own properties only: a label such as "constructor" or "toString" is a valid
+    // label, and a bare lookup would return the inherited built-in, not an array.
+    const legacyLabels = label !== undefined && Object.prototype.hasOwnProperty.call(LEGACY_LABELS, label)
+        ? LEGACY_LABELS[label]
+        : [];
+    const legacy = pairing === "loose" && label !== undefined && legacyLabels.includes(badge.label);
+    if (label !== undefined && badge.label !== label && !legacy) {
         errors.push(`label is ${JSON.stringify(badge.label)}, expected ${JSON.stringify(label)}`);
     }
     if (typeof badge.message !== "string" || badge.message.length === 0) {
