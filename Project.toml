@@ -1,6 +1,6 @@
 name = "Apodeixis"
 uuid = "7d8c4f3a-6a31-4f21-9c72-1d496dd2ad67"
-authors = ["Apodeixis.jl contributors"]
+authors = ["Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>"]
 version = "0.1.0"
 
 [deps]
