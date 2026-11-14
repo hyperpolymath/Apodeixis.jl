@@ -25,6 +25,16 @@ fn clearError() void {
     last_error = null;
 }
 
+/// Duplicate a byte slice as a NUL-terminated buffer across Zig 0.15/0.16/0.17
+/// (`Allocator.dupeZ` was removed in Zig 0.17).
+/// The caller owns the returned slice and must free it with `allocator`.
+/// Propagates allocation failure.
+fn dupeZ(allocator: std.mem.Allocator, bytes: []const u8) ![:0]u8 {
+    const buf = try allocator.allocSentinel(u8, bytes.len, 0);
+    @memcpy(buf[0..bytes.len], bytes);
+    return buf;
+}
+
 //==============================================================================
 // Core Types (must match src/abi/Types.idr)
 //==============================================================================
@@ -123,7 +133,7 @@ export fn apodeixis_jl_get_string(handle: ?*Handle) ?[*:0]const u8 {
     }
 
     // Example: allocate and return a string
-    const result = h.allocator.dupeZ(u8, "Example result") catch {
+    const result = dupeZ(h.allocator, "Example result") catch {
         setError("Failed to allocate string");
         return null;
     };
@@ -187,7 +197,7 @@ export fn apodeixis_jl_last_error() ?[*:0]const u8 {
 
     // Return C string (static storage, no need to free)
     const allocator = std.heap.c_allocator;
-    const c_str = allocator.dupeZ(u8, err) catch return null;
+    const c_str = dupeZ(allocator, err) catch return null;
     return c_str.ptr;
 }
 
