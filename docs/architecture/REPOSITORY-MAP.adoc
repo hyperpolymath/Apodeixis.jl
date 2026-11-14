@@ -113,6 +113,10 @@ predecessors did.
 | optional
 | forge-facing copy of LICENSES/MPL-2.0.txt. Optional, not required:
 
+| `LICENSE.adoc`
+| yes
+| the licence (MPL-2.0); renamed from LICENSE to the estate AsciiDoc format 2026-10-26
+
 | `LICENSES/`
 | yes
 | REUSE licence texts, dual-licence model (code MPL-2.0 / docs CC-BY-SA-4.0)
