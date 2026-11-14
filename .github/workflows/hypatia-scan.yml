@@ -51,7 +51,7 @@ jobs:
       security-events: write
       vulnerability-alerts: read # Dependabot alerts, for Hypatia's DA rules
     env:
-      HYPATIA_SHA: 'be98f74ce93df200752f3798efa1305bfa3e0e10'
+      HYPATIA_SHA: '6693f9aed8e4383f78a3d01b600b32663bf7a45c'
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -61,7 +61,7 @@ jobs:
 
       # OTP 28.5.0.8 crashes this job with SIGSEGV (exit 139 in hypatia-cli.sh
       # scan) on some scanned trees, deterministically per tree
-      # (Apodeixis.jl#339: 10 of 10 runs on #338's head, 0 of 10 on
+      # (rsr-template-repo#339: 10 of 10 runs on #338's head, 0 of 10 on
       # main's); OTP 27.3.4.19 scanned both trees cleanly (0 of 10 each).
       # Same VM bug as the RSR oracle (#333, #335). Do not move to 28.x until a
       # pinned 28.x build scans #338's head 7821940 with no crash.

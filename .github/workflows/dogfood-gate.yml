@@ -587,12 +587,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: hyperpolymath/hypatia
-          ref: be98f74ce93df200752f3798efa1305bfa3e0e10
+          # The repository-wide Hypatia pin: the same commit as hypatia-scan.yml (HYPATIA_SHA),
+          # both verdict renderers (--hypatia-ref) and the rule-order policy, so the scanner and
+          # this oracle cannot grade different rules (docs/HYPATIA-RULE-ORDER.adoc, C2). It contains
+          # hypatia#1062 (the PinSites miscompile fix, merged as 37b8d01). The earlier pin be98f74 lacks it.
+          ref: 6693f9aed8e4383f78a3d01b600b32663bf7a45c
           path: _hypatia
           persist-credentials: false
       # OTP 28.x (28.1 to 28.5.0.8) crashes this step with SIGSEGV in
       # sweep_off_heap, called from the JIT's bs_init_bits, on trees whose
-      # workflow content trips it (Apodeixis.jl#333). OTP 27.3 scored all
+      # workflow content trips it (rsr-template-repo#333). OTP 27.3 scored all
       # of them cleanly. Do not move to 28.x until a pinned 28.x build scores
       # the #333 trees (af8665c, a55669e, 6ad5378) with no crash.
       - name: Setup Elixir 1.19.4 / OTP 27.3.4.19 for Hypatia oracle
@@ -608,7 +612,7 @@ jobs:
             _hypatia/_build
             ~/.hex
             ~/.mix
-          key: hypatia-oracle-${{ runner.os }}-otp27.3.4.19-elx1194-be98f74ce93df200752f3798efa1305bfa3e0e10
+          key: hypatia-oracle-${{ runner.os }}-otp27.3.4.19-elx1194-6693f9aed8e4383f78a3d01b600b32663bf7a45c
       - name: Compile the oracle
         working-directory: _hypatia
         run: mix local.hex --force && mix local.rebar --force && mix deps.get && mix compile

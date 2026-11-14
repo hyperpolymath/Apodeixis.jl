@@ -445,7 +445,7 @@ jobs:
             --hypatia-sarif "$ev/hypatia-scan-findings/hypatia.sarif"
             --panic "$ev/static-analysis-findings/panic-attack-findings.json"
             --pons "$ev/static-analysis-findings/pons-findings.json"
-            --hypatia-ref be98f74ce93df200752f3798efa1305bfa3e0e10
+            --hypatia-ref 6693f9aed8e4383f78a3d01b600b32663bf7a45c
             --panic-ref b5530834a839734d1d181bfe6edb0d43d4233cf4
             --pons-ref 51b8920f541782ceb9465ea3f0d33c96104fc1fb
           )
