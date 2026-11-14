@@ -571,6 +571,7 @@ async function main() {
             ["missing final newline", SUCCESS_BADGE.trimEnd(), "success", SUCCESS_BADGE],
             ["legacy red skipped badge", '{"schemaVersion":1,"label":"K9","message":"skipped","color":"red"}\n', "skipped", SKIPPED_BADGE],
             ["legacy unrecognised message", '{"schemaVersion":1,"label":"K9","message":"pending","color":"blue"}\n', "success", SUCCESS_BADGE],
+            ["legacy K9 label (k9-deed L0\u2013L2), as published by the earlier renderer", '{"schemaVersion":1,"label":"k9-deed L0\u2013L2","message":"passing","color":"brightgreen"}\n', "success", SUCCESS_BADGE],
         ]) {
             await testWithApi(`existing ${name} is updated to canonical bytes`, {
                 branchExists: true, fileBytes: bytes,
@@ -772,6 +773,9 @@ async function main() {
             ["JSON array", "[]\n"],
             ["missing schemaVersion", '{"label":"K9","message":"failure","color":"red"}\n'],
             ["null message", '{"schemaVersion":1,"label":"K9","message":null,"color":"red"}\n'],
+            ["a foreign label that is not a K9 predecessor", '{"schemaVersion":1,"label":"coverage","message":"success","color":"brightgreen"}\n'],
+            ["the legacy K9 label with a missing message", '{"schemaVersion":1,"label":"k9-deed L0\u2013L2","color":"red"}\n'],
+            ["the legacy K9 label with the wrong schemaVersion", '{"schemaVersion":2,"label":"k9-deed L0\u2013L2","message":"passing","color":"brightgreen"}\n'],
             ...INVALID_BADGES,
         ]) {
             const api = createApi({ branchExists: true, fileBytes: text });
@@ -790,6 +794,31 @@ async function main() {
                 equal(out.code, 1, `expected exit 1, got ${out.code}: ${out.stderr}`);
                 equal(api.writes().length, 0, "malformed existing content must not be overwritten");
                 check(/refused/i.test(out.stderr), `stderr must say refused: ${out.stderr}`);
+            });
+            await api.close();
+        }
+
+        // A label inherited from Object.prototype is still a valid label. With an
+        // existing foreign file the legacy lookup must fall back to "no legacy
+        // labels" and refuse cleanly, not throw a TypeError.
+        for (const inherited of ["constructor", "toString", "hasOwnProperty"]) {
+            const api = createApi({ branchExists: true, fileBytes: '{"schemaVersion":1,"label":"coverage","message":"success","color":"brightgreen"}\n' });
+            const url = await api.listen();
+            await test(`label "${inherited}" over an existing foreign file is refused, not a crash`, async () => {
+                const out = await runAsync([
+                    "publish",
+                    "--label", inherited,
+                    "--lane-result", "failure",
+                    "--artifact", failureArtifact,
+                    "--branch", BRANCH,
+                    "--path", DEST,
+                    "--repo", "example/template",
+                    "--api-url", url,
+                ]);
+                equal(out.code, 1, `expected exit 1, got ${out.code}: ${out.stderr}`);
+                check(!/TypeError/.test(out.stderr), `must not crash with a TypeError: ${out.stderr}`);
+                check(/refused/i.test(out.stderr), `stderr must say refused: ${out.stderr}`);
+                equal(api.writes().length, 0, "a foreign file must not be overwritten");
             });
             await api.close();
         }
