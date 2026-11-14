@@ -55,6 +55,7 @@ them.
 | ABI-5 | C ABI compliance (`CABICompliant`, `FieldsAligned`) (artefact: `verification/proofs/idris2/ABI/Compliance.idr`) | open | ungraded | — | — | —
 | TP-1 | Core data type well-formedness (artefact: `verification/proofs/idris2/Types.idr`) | open | ungraded | — | — | —
 | TP-2 | Public API type safety (exported functions). PROOF-POLICY §1 assigns APIs to Idris2; the Lean file is the shipped example until a project ports it (artefact: `verification/proofs/lean4/ApiTypes.lean`) | open | ungraded | — | — | —
+| COAPT-1 | Coaptation Must/Trust gate: `hardGateSound`, `hardGateComplete`, `mustCannotGap`, `trustCannotGap` over the Idris2 model; gated in `verification/proofs/idris2/MANIFEST` (artefact: `.machine_readable/coaptation/core/Coaptation.idr`) | open | ungraded | — | — | —
 |===
 
 == Trust boundary
@@ -68,8 +69,8 @@ List every axiom, `ASSUMED` boundary specification (third-party code, PROOF-POLI
   the Nickel comparator `.machine_readable/coaptation/coapt.ncl`. The
   correspondence is argued in the model's comments, not kernel-checked, and
   `coapt.ncl` stays the authoritative reading (see
-  `.machine_readable/coaptation/README.adoc`). No row in the Claims table rests on
-  this bridge.
+  `.machine_readable/coaptation/README.adoc`). COAPT-1 is a claim about the Idris2 model only; it says nothing about
+  `coapt.ncl` until this bridge is discharged.
 
 == Verification commands
 
