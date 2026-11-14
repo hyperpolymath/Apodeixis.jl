@@ -56,13 +56,16 @@
 #   RUN zig build -Doptimize=ReleaseFast
 #   # Output: /build/zig-out/bin/apodeixis.jl
 #
-# Base image: pinned by digest (TRUST-DEFAULTS-POLICY, check-container-pins.sh).
-# The digest below is the multi-arch (amd64 + arm64) index that
-# cgr.dev/chainguard/wolfi-base:latest resolved to on 2026-11-14. Chainguard
-# rebuilds Wolfi daily, so refresh it deliberately: resolve the new digest with
-# `podman image inspect cgr.dev/chainguard/wolfi-base:latest` after a pull, then
-# update BOTH FROM lines.
-FROM cgr.dev/chainguard/wolfi-base:latest@sha256:1f6b749929164c3d9e7cad0289254f39b2ba51e1dddaeb0fa57532ea03f2db31 AS builder
+# Base image: pinned by digest only (TRUST-DEFAULTS-POLICY, check-container-pins.sh).
+# The digest is the multi-arch (amd64 + arm64) OCI index that
+# cgr.dev/chainguard/wolfi-base:latest resolved to on 2026-11-14. A tag next to a
+# digest is ignored by the runtime, so none is written. Chainguard rebuilds Wolfi
+# daily; refresh the pin deliberately and update BOTH FROM lines. Use the digest
+# of the top-level index (media type application/vnd.oci.image.index.v1+json),
+# which is the Docker-Content-Digest the registry returns for the :latest
+# manifest request, NOT one of the per-platform digests that
+# `podman image inspect` may also list under RepoDigests.
+FROM cgr.dev/chainguard/wolfi-base@sha256:1f6b749929164c3d9e7cad0289254f39b2ba51e1dddaeb0fa57532ea03f2db31 AS builder
 
 # TODO: Install your language toolchain
 RUN apk add --no-cache build-base
@@ -80,7 +83,7 @@ COPY . .
 # Minimal production image. Only the compiled binary/release and runtime
 # dependencies are included. No compilers, no source code, no build tools.
 #
-FROM cgr.dev/chainguard/wolfi-base:latest@sha256:1f6b749929164c3d9e7cad0289254f39b2ba51e1dddaeb0fa57532ea03f2db31
+FROM cgr.dev/chainguard/wolfi-base@sha256:1f6b749929164c3d9e7cad0289254f39b2ba51e1dddaeb0fa57532ea03f2db31
 
 # OCI image labels (compatible with cerro-torre .ctp bundle metadata)
 LABEL org.opencontainers.image.title="Apodeixis.jl" \
