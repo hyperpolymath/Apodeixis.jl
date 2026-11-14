@@ -587,9 +587,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: hyperpolymath/hypatia
-          # Pinned to a Hypatia commit that contains hypatia#1062 (the PinSites miscompile
-          # fix, merged as 37b8d01). The earlier pin be98f74 lacks it.
-          ref: 51539abf3d2472b955da9b051a68c5971f6cfa22
+          # The repository-wide Hypatia pin: the same commit as hypatia-scan.yml (HYPATIA_SHA),
+          # both verdict renderers (--hypatia-ref) and the rule-order policy, so the scanner and
+          # this oracle cannot grade different rules (docs/HYPATIA-RULE-ORDER.adoc, C2). It contains
+          # hypatia#1062 (the PinSites miscompile fix, merged as 37b8d01). The earlier pin be98f74 lacks it.
+          ref: 6693f9aed8e4383f78a3d01b600b32663bf7a45c
           path: _hypatia
           persist-credentials: false
       # OTP 28.x (28.1 to 28.5.0.8) crashes this step with SIGSEGV in
@@ -610,7 +612,7 @@ jobs:
             _hypatia/_build
             ~/.hex
             ~/.mix
-          key: hypatia-oracle-${{ runner.os }}-otp27.3.4.19-elx1194-51539abf3d2472b955da9b051a68c5971f6cfa22
+          key: hypatia-oracle-${{ runner.os }}-otp27.3.4.19-elx1194-6693f9aed8e4383f78a3d01b600b32663bf7a45c
       - name: Compile the oracle
         working-directory: _hypatia
         run: mix local.hex --force && mix local.rebar --force && mix deps.get && mix compile
