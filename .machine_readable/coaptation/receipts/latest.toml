@@ -6,13 +6,13 @@
 [receipt]
 schema = "hyperpolymath.coaptation/1"
 repo = "Apodeixis.jl"
-band = "amber"
-proposed-action = "advisory — soft drift within bands (posture/intend). Open an advisory issue; no re-anchor."
+band = "green"
+proposed-action = "none — the descriptile self-model coapts with the contractile set-point within tolerance."
 
 [coverage]
-clauses-total = 54
-descriptile-witnessed = 1
-probe-deferred-to-hunt = 28
+clauses-total = 55
+descriptile-witnessed = 2
+probe-deferred-to-hunt = 29
 must-trust-unmeasured-gaps = 0
 note = "Yard sees descriptile evidence only; probe-deferred obligations need a Hunt-tier run for a full hard-gate."
 
@@ -21,13 +21,13 @@ grade = "boolean_gate / boolean_gate_provenance"
 witnessed = 1
 refuted = 0
 unmeasured-gaps = 0
-probe-deferred = 28
+probe-deferred = 29
 gate = "pass"
 
 [reading.adjust]
 grade = "posture (advisory; accessibility / inclusive design)"
-satisfied = "0/1"
-posture-ok = false
+satisfied = "1/1"
+posture-ok = true
 
 [reading.intend]
 grade = "tropical (min-plus distance-to-north-star; wishes excluded)"
@@ -57,6 +57,7 @@ must.spdx-headers = "probe-deferred"
 must.toolchain-matches-language = "probe-deferred"
 must.security-policy = "probe-deferred"
 must.repo-deed = "probe-deferred"
+must.internal-links-resolve = "probe-deferred"
 must.governance-docs = "probe-deferred"
 must.machine-readable-dir = "probe-deferred"
 must.contractiles-complete = "probe-deferred"
@@ -80,7 +81,7 @@ trust.no-dockerfile = "probe-deferred"
 trust.site-security-headers = "probe-deferred"
 trust.site-well-known = "probe-deferred"
 trust.site-resource-records = "probe-deferred"
-adjust.placeholder-drift = "refuted"
+adjust.placeholder-drift = "witnessed"
 adjust.template-version-drift = "unmeasured"
 adjust.readme-completeness = "unmeasured"
 adjust.example-accuracy = "unmeasured"
@@ -100,5 +101,5 @@ bust.sync-drift-between-repos = "latent"
 bust.contractile-parse-error = "latent"
 
 [provenance]
-contractiles = "intend@53c58b12670b must@a5104687b244 trust@1b3a747ddcb0 adjust@cfd661debafd dust@a3de1d6db05d bust@72320ddbc891"
-descriptiles = "deed@6860d7e13310 anchor@51194a4e21e8"
+contractiles = "intend@a56a7068714f must@610a83f2fbe6 trust@5b7370c46999 adjust@f2f1e1b2c792 dust@ff9c43b233f0 bust@07a67acea6b2"
+descriptiles = "deed@3a9cfb931cc6 anchor@035b5062d09c"
