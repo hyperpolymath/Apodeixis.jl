@@ -63,7 +63,13 @@ List every axiom, `ASSUMED` boundary specification (third-party code, PROOF-POLI
 §1.1) and recorded exception (§4) here, with the claims that rest on it. Write
 "none" when there are none, so an empty section cannot read as an oversight.
 
-none
+* `ASSUMED` (PROOF-POLICY §1.1): the Idris2 model in
+  `.machine_readable/coaptation/core/Coaptation.idr` is a faithful transcription of
+  the Nickel comparator `.machine_readable/coaptation/coapt.ncl`. The
+  correspondence is argued in the model's comments, not kernel-checked, and
+  `coapt.ncl` stays the authoritative reading (see
+  `.machine_readable/coaptation/README.adoc`). No row in the Claims table rests on
+  this bridge.
 
 == Verification commands
 
