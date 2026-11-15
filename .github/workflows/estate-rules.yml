@@ -57,6 +57,10 @@ jobs:
             || { echo "::error::REPOSITORY-MAP.adoc is stale - run 'just repo-map'"; exit 1; }
       - name: AsciiDoc by default (no .md under docs/)
         run: bash scripts/check-no-md-in-docs.sh .
+      - name: AsciiDoc-by-default gate self-test (positive and negative controls)
+        run: bash tests/workflows/check_no_md_in_docs_test.sh
+      - name: proof-status claims reader (positive and negative controls)
+        run: bash tests/workflows/proof_claims_rows_test.sh
       # The rule above checks the file EXTENSION only, so a Markdown body
       # renamed to .adoc passes it. This one checks the file actually parses.
       # asciidoctor's --failure-level defaults to FATAL, so a document emitting
@@ -64,6 +68,8 @@ jobs:
       # verdict rests on a stderr comparison.
       - name: Install asciidoctor
         run: sudo gem install asciidoctor -v 2.0.26 --no-document
+      - name: Proof gate self-test (stub prover; positive and negative controls)
+        run: bash tests/workflows/check_proofs_test.sh
       - name: AsciiDoc render gate self-test (must catch what bare asciidoctor misses)
         run: bash tests/workflows/check_adoc_renders_test.sh
       - name: Every tracked .adoc renders clean
@@ -87,6 +93,8 @@ jobs:
         run: bash tests/workflows/internal_links_test.sh
       - name: Deed clause writer controls
         run: bash tests/workflows/deed_clause_test.sh
+      - name: Deed template sync controls
+        run: bash tests/workflows/deed_template_sync_test.sh
       - name: Canon lockstep decision controls (spine strict, instance lag passes)
         run: bash tests/workflows/canon_pin_check_test.sh
       - name: Canon lockstep adoption tool controls
@@ -112,6 +120,10 @@ jobs:
         run: bash tests/workflows/mint_cleanup_test.sh
       - name: Self-name pass keeps issue references, provenance and detectors
         run: bash tests/workflows/self_name_pass_test.sh
+      - name: Mint scrub deletes only standalone constructs
+        run: bash tests/workflows/scrub_deletes_whole_constructs_test.sh
+      - name: Carried tests survive a child tree
+        run: bash tests/workflows/verbatim_tests_child_safe_test.sh
       # Stage-2 trial of standards A7 8.1: an edict selected by identity. Trial
       # only; it gates nothing but its own fixtures.
       - name: Edict trial (A7 stage 2)
@@ -171,6 +183,12 @@ jobs:
       # equal to standards scripts/uuid-v8.js, and read without re-deriving.
       - name: Repo chora id is minted as UUIDv8 and read as written
         run: bash tests/workflows/uuid_v8_test.sh
+      # The deed's identity literals (standards A1 v0.4.5 T30, ruling Q2): a v5
+      # id or a #u5 literal in :repo-uuid or :beholding-chora fails in every mode.
+      - name: Identity literals are version 8 (#uuid or #u8)
+        run: bash scripts/check-identity.sh "$(bash scripts/deed-field.sh --find .)"
+      - name: Identity-literal gate self-test (v5, #u5, v4 and upper-case must fail)
+        run: bash tests/workflows/check_identity_test.sh
       # A divergent legacy .well-known/ file is quarantined under the MINT date,
       # so a replay on a later day names it the same.
       - name: Legacy .well-known quarantine is named by the mint date
@@ -227,6 +245,16 @@ jobs:
       # records.
       - name: Governance replaces the runtime gate for every pull request
         run: bash tests/workflows/governance_policy_test.sh
+      # A cancelled run must not leave a red verdict job behind.
+      - name: Fork governance verdict skips on cancel
+        run: bash tests/workflows/fork_governance_verdict_cancel_test.sh
+      # The proof-status vocabulary must give one answer for an open row.
+      - name: PROOF-STATUS vocabulary agrees with itself
+        run: bash tests/workflows/proof_status_vocabulary_test.sh
+      # aspect_tests.sh is carried verbatim, so a project token on an active
+      # line would print literally in every minted repository.
+      - name: Aspect-test banner carries no unsubstituted token
+        run: bash tests/workflows/aspect_banner_test.sh
       # The README badge is generated output on an orphan branch. This proves
       # the state -> colour table (grey, never a stale green), the byte-equal
       # no-op, the orphan commit, the API-error classification and the workflow
@@ -284,6 +312,8 @@ jobs:
           fi
       - name: Converted container configs keep their data (template only)
         run: bash tests/workflows/container_kyaml_test.sh
+      - name: Base-image guidance agrees with the digest-pin gate
+        run: bash tests/workflows/container_guidance_test.sh
       - name: KYAML ratchet self-test (installs verify, gate propagates, narrowing)
         run: bash tests/workflows/kyaml_ratchet_test.sh
       - name: I-JSON (RFC 7493) + JCS (RFC 8785) canonical gate & self-test
@@ -332,6 +362,11 @@ jobs:
       # a scanner that declares none. Every property is mutated in the test.
       - name: Secret scanner contract (three stable contexts)
         run: bash tests/workflows/secret_scanner_contract_test.sh
+      # The gitleaks history pass scans only a pull request's own commits and
+      # the full history elsewhere; real git repos and the pinned binary prove
+      # both bounds, the fallbacks, and that a planted secret still fails.
+      - name: Secret scanner history scope (PR diff vs full history)
+        run: bash tests/workflows/secret_scanner_history_scope_test.sh
       # Behaviour and negative controls for the inline fixes to governance,
       # hypatia-scan, main-estate-audit, rust-ci and secret-scanner.
       - name: Inline workflow gap fixes (behaviour + negative controls)

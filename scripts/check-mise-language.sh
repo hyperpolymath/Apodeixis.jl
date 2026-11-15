@@ -108,6 +108,7 @@ if [ -z "$LANGS" ] && [ "$DETECT" -eq 1 ]; then
     [ -n "$(_find gleam.toml)" ]      && _l+=(gleam)
     [ -n "$(_find dune-project)" ]    && _l+=(ocaml)
     { [ -n "$(_find '*.cabal')" ] || [ -n "$(_find stack.yaml 1)" ]; } && _l+=(haskell)
+    [ -n "$(_find '*.affine' 3)" ]  && _l+=(affinescript)
     [ -n "$(_find package.json)" ]    && _l+=(bun)
     [ "${#_l[@]}" -eq 0 ] && _l+=(docs)
     LANGS="${_l[*]}"

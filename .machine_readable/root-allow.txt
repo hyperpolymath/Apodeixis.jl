@@ -98,3 +98,4 @@ tests/
 ?priv/                     # elixir/OTP: an application's priv dir is fixed at the project root (Application.app_dir/2)
 ?Cargo.toml                # rust-cli archetype: Cargo reads the package manifest from the package root only; the overlay mints it from Cargo.toml.in
 ?Cargo.lock                # rust-cli archetype: `just repo-init` generates it (cargo generate-lockfile) because the minted CI builds with --locked
+?.uuid-v8-exempt        # scripts/check-uuid-v8.sh reads this exact root path: the negative-control tests that hold #u5 on purpose (owner-approved 2026-11-14)

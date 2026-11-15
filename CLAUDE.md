@@ -145,13 +145,21 @@ present an unexecuted check as a pass. Using both does not make two
 independent witnesses (policy §1.2).
 
 Third-party code (crates such as Bevy, libraries, forks) is **not** converted
-or re-proved. State what a proof relies on as an `ASSUMED` boundary
-specification, and when choosing between dependencies that fit equally well,
-prefer one that carries its own verification. A preference, not a gate.
+or re-proved. Where a proof relies on a dependency the prover does not check,
+state the reliance as an `ASSUMED` boundary specification. Where the
+dependency's whole import cone compiles under the prover's safe mode with zero
+postulates, it is *checked, not assumed*: record the cone (root module, flags,
+postulate count of zero, library name, version and pin) instead of an
+`ASSUMED` row (policy §1.1). A cone with a postulate, or compiled outside safe
+mode, is not checked. When choosing between dependencies that fit equally
+well, prefer one that carries its own verification. A preference, not a gate.
 
-Proof grades are policy §8, *Proof Witness Grades*: `PWG-3` < `PWG-2i` <
-`PWG-2ii` < `PWG-1`, where `PWG-1` is strongest. A grade is derived from
-receipts, never asserted. A "verified" or "machine-checked" claim needs
-current receipts. Report a census with its denominator, never a
-percentage. Always write the `PWG-` prefix: CRG, TRG, ARG and FRG letters,
-and ECHIDNA's `TrustLevel`, are different schemes.
+Proof Witness Grades are policy §8. They apply to *theory* theorems only: Agda
+source, rechecked in Rocq and Lean (§8.1). Engineering proofs (Creusot, Verus,
+SPARK, Idris2) are not graded on this ladder; they use the §5 tokens only. For
+a theory theorem, `PWG-3` < `PWG-2i` < `PWG-2ii` < `PWG-1`, where `PWG-1` is
+strongest. A theorem that does not reach `PWG-3` is `ungraded`, with no
+qualifier. A grade is derived from receipts, never asserted. A "verified" or
+"machine-checked" claim needs current receipts. Report a census with its
+denominator, never a percentage. Always write the `PWG-` prefix: CRG, TRG, ARG
+and FRG letters, and ECHIDNA's `TrustLevel`, are different schemes.

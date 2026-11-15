@@ -15,6 +15,13 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# This test asserts the TEMPLATE's own root allowlist (the ?Cargo.toml entries of the
+# rust-cli archetype). A repo minted from the template has its own allowlist, and a
+# real Rust crate must keep Cargo.toml REQUIRED, so there the assertions do not apply.
+if ! bash "$REPO/scripts/is-template-tree.sh" "$REPO"; then
+    echo "SKIP: rust-cli root shape (not the template tree; is-template-tree.sh says no)"
+    exit 0
+fi
 CHECKER="$REPO/scripts/check-root-shape.sh"
 ALLOW="$REPO/.machine_readable/root-allow.txt"
 WORK=$(mktemp -d)
@@ -72,6 +79,10 @@ done
 bash "$REPO/scripts/render-mise.sh" --root "$R" >/dev/null || fail "render-mise failed on a rust tree"
 [ -s "$R/mise.lock" ] || fail "render-mise deleted mise.lock (root-allow.txt requires it)"
 grep -qE '^rust = ' "$R/mise.toml" || fail "precondition: rust is not in the rendered toolchain"
+# The copyright line of the file being replaced survives the render.
+cmp -s <(grep '^# SPDX-FileCopyrightText:' "$REPO/mise.toml") \
+       <(grep '^# SPDX-FileCopyrightText:' "$R/mise.toml") \
+    || fail "render-mise dropped or changed the SPDX-FileCopyrightText line"
 grep -qE '^zig = ' "$R/mise.toml" && fail "precondition: zig is still declared"
 for tool in zig trivy; do
     ! grep -qF "tools.$tool" "$R/mise.lock" || fail "lock still pins dropped tool $tool"

@@ -38,13 +38,13 @@
 # Go -> Rust
 # Python -> Julia or Rust
 
-# CONTAINERS
+# CONTAINERS (only if this repo builds a container; otherwise skip)
 # Runtime: Podman first.
 # File: Containerfile (never Dockerfile).
-# Base: cgr.dev/chainguard/wolfi-base:latest or cgr.dev/chainguard/static:latest.
+# Base: cgr.dev/chainguard/wolfi-base or cgr.dev/chainguard/static, pinned by digest (@sha256:<digest>); a tag such as :latest is not a pin.
 
-# ABI/FFI
-# ABI: Idris2 with dependent types (src/interface/abi/).
+# ABI/FFI (only if this repo has a src/interface/ seam; otherwise skip)
+# ABI: Idris2 with dependent types (src/interface/Abi/).
 # FFI: Zig with C ABI (src/interface/ffi/).
 # Headers: src/interface/generated/.
 

@@ -34,9 +34,9 @@ Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 - [ ] Repo deed `(meta)` and/or `docs/decisions/` updated (if architectural decisions changed)
 - [ ] `docs/status/ROADMAP.adoc` updated (if milestones or next actions changed)
 - [ ] Documentation updated for user-facing changes
-- [ ] `TOPOLOGY.md` updated (if architecture changed)
+- [ ] `docs/architecture/TOPOLOGY.adoc` updated (if architecture changed)
 - [ ] `CHANGELOG` or release notes updated
-- [ ] New dependencies reviewed for license compatibility (MPL-2.0 / MPL-2.0)
+- [ ] New dependencies reviewed for license compatibility (compatible with MPL-2.0)
 - [ ] ABI/FFI changes validated (`src/interface/abi/` and `src/interface/ffi/` consistent)
 
 ## Testing

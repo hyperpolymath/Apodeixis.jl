@@ -59,7 +59,7 @@ jobs:
           # suite (no check.sh), so run the `run:` block of the pinned
           # action.yml itself rather than a copy. They can fail a build.
           # manifest-check is NOT here: it delegates to the deed-ecosystem and
-          # k9-ecosystem validate-actions, which are `uses:` steps, not scripts.
+          # k9-ecosystem validate-actions, which are `uses:` steps below, not scripts.
           for gate in required-files-check idris2-abi-check; do
             echo "=== cicd-suite: $gate ==="
             script="$(yq -r '.runs.steps[0].run' "$SUITE/$gate/action.yml")"
@@ -76,3 +76,16 @@ jobs:
             exit 1
           fi
           echo "Central Estate CI/CD Audit passed."
+
+      # manifest-check, inlined: the pinned cicd-suite action delegates to these
+      # two validators. Both are composite actions with no nested `uses:`, pinned
+      # at the commits the suite itself pins, now tagged v0.1.0 upstream.
+      - name: Validate DEED manifests
+        uses: hyperpolymath/deed-ecosystem/validate-action@f9d999b60cb5f383679ea19912bcdc49c944973a # v0.1.0
+        with:
+          path: .
+
+      - name: Validate K9 manifests
+        uses: hyperpolymath/k9-ecosystem/validate-action@2155aa26a21758f2ba119f61bc7e0e1981c106fb # v0.1.0
+        with:
+          path: .

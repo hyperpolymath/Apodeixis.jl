@@ -17,7 +17,8 @@
 #   deed-field.sh --has DEED PATH         exit 0 iff the clause exists
 #   deed-field.sh --find [DIR]            print the one *_chora.deed in DIR (default .)
 #   deed-field.sh --uuid DEED             the repo uuid: the body of :repo-uuid #uuid"…" as
-#                                         written (legacy #u5 / #u8 forms are derived)
+#                                         written (#u8 is derived; a #u5 is derived only to
+#                                         read an old deed, and check-identity.sh refuses it)
 #   deed-field.sh --typed DEED PATH KEY   like the first form, but a tagged literal keeps its
 #                                         tag and quotes: #u5"github.com/o/r" (a plain value
 #                                         prints as it does without --typed)
@@ -202,11 +203,13 @@ if [ "$mode" = uuid ]; then
       id="${lit#\#uuid\"}"; id="${id%\"}" ;;
     '#u5"'*'"')
       name="${lit#\#u5\"}"; name="${name%\"}"
-      echo "deed-field.sh: :repo-uuid is the legacy #u5 literal; the chora id is #uuid\"<v8 id of the birth path>\" (standards A1 V8)" >&2
+      # Read only so an old deed can still be looked up: a #u5 in an identity
+      # field is u5-identity, an error in every mode (A1 v0.4.5 T30, Q2), and
+      # scripts/check-identity.sh refuses it.
+      echo "deed-field.sh: :repo-uuid is a #u5 literal, an error under A1 T30 (Q2); derived here only to read an old deed. Write #uuid\"<v8 id of the birth path>\"." >&2
       id="$(uuid5_url "$name")" || exit 2 ;;
     '#u8"'*:*'"')
       body="${lit#\#u8\"}"; body="${body%\"}"
-      echo "deed-field.sh: :repo-uuid is the legacy #u8 literal; the chora id is #uuid\"<v8 id of the birth path>\" (standards A1 V8)" >&2
       id="$(bash "$(dirname "${BASH_SOURCE[0]}")/uuid-v8.sh" "${body%%:*}" "${body#*:}")" || exit 2 ;;
     *) echo "deed-field.sh: :repo-uuid is not a #uuid, #u5 or #u8 literal: '$lit'" >&2; exit 2 ;;
   esac

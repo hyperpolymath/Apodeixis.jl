@@ -8,6 +8,20 @@ https://semver.org/spec/v2.0.0.html[Semantic Versioning].
 
 === [Unreleased]
 
+==== Fixed
+
+* The K9 badge publisher failed on every push to `main` in minted repos: it
+  wrote straight to the `governance-badges` branch, and the estate's
+  `Branch-Floor` ruleset (all branches, `code_coverage` requires a pull
+  request) refused it with HTTP 409. The badge is now staged by the `badges`
+  job (`governance-badge.js stage`, `contents: read` only) and deployed with
+  the GitHub Pages site by `pages.yml` (now triggered by Dogfood Gate
+  completing on `main`), at `https://<owner>.github.io/<repo>/badges/k9.json`.
+  The ruleset is satisfied, not bypassed. Minted repos need Pages enabled with
+  source "GitHub Actions"; `pages.yml` lost its `push` and `workflow_dispatch`
+  triggers. The helper's old `publish` route is no longer used by any workflow
+  and is left in place for a follow-up removal.
+
 ==== Added
 
 * **Chain minting: a minted repo can be minted again.** "Use this template"

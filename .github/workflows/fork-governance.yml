@@ -324,7 +324,7 @@ jobs:
   verdict:
     name: Fork governance verdict
     needs: [deed, k9, fleet]
-    if: always()
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

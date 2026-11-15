@@ -400,7 +400,7 @@ render_args=(render --out "$WORK/grid" --renderer-dir "$FX/renderer"
     --report-backs "$FX/report-backs" --enrolment "$FX/enrolment.json"
     --sha 0123456789abcdef0123456789abcdef01234567 --run 42
     --pr 7 --repo example/template --lane hypatia
-    --hypatia-ref be98f74ce93df200752f3798efa1305bfa3e0e10
+    --hypatia-ref 6693f9aed8e4383f78a3d01b600b32663bf7a45c
     --panic-ref b689a74d2762a1c19839ae3fbd59b7fe5ef920ea
     --pons-ref 32e55677d8fd1f3010848dee22e822c2f385c2a0
     --url https://github.com/example/template/actions/runs/42

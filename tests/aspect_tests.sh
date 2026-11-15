@@ -39,7 +39,7 @@ fail() { red "  FAIL: $1"; FAIL=$((FAIL + 1)); }
 warn() { yellow "  WARN: $1"; WARN=$((WARN + 1)); }
 
 echo "═══════════════════════════════════════════════════════════════"
-echo "  APODEIXIS_JL — Aspect Tests (Cross-Cutting Concerns)"
+echo "  $(basename "$PROJECT_DIR") — Aspect Tests (Cross-Cutting Concerns)"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
@@ -101,7 +101,7 @@ fi
 # Aspect 3: ABI/FFI contract. The Idris2 side and the Zig side name the same
 # symbols, the same library and the same Result codes. Text-level: it reads
 # the two sources, not a built library, and checks names and integer codes,
-# not types. Symbol names may still carry the apodeixis_jl token before
+# not types. Symbol names may still carry the {{project}} token before
 # `just repo-init`; both sides carry it alike, so they compare equal.
 # ═══════════════════════════════════════════════════════════════════════
 bold "Aspect 3: ABI/FFI contract"

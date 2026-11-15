@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Files scripts/check-uuid-v8.sh does not scan. Exact paths only, one per line.
+# Ratchet-exception: negative-control fixture, owner approved 2026-11-14 (SysArch thread)
+tests/workflows/coaptation_families_test.sh
+tests/workflows/self_name_pass_test.sh
+tests/workflows/uuid5_url_test.sh
