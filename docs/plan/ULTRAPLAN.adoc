@@ -1,0 +1,94 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Apodeixis.jl: plan to v1.0.0
+:revdate: 2026-11-15
+:toc:
+
+Apodeixis.jl is a Julia source-policy audit today. The goal is a verifier for
+a closed Julia subset. This plan is the execution layer. The work packages
+WP-00 to WP-11 and the milestones M0 to M8 stay in
+link:../architecture/APODEIXIS-ULTRAPLAN.adoc[the detailed plan]. The slices A
+to J stay in link:../architecture/APODEIXIS-MVP-IMPLEMENTATION-PLAN.adoc[the
+MVP plan]. This file adds the v1.0.0 gates, the order, the models and the
+effort.
+
+The work that is shared with the sibling verifiers (`atoma`, `quintessence`,
+`bactrian`, `canonry`, `chancel`) is in the family plan,
+`docs/plan/FAMILY-ULTRAPLAN.adoc` in `hyperpolymath/atoma`. IDs F1 to F12 and
+waves W0 to W5 come from that plan.
+
+== Measured state on 2026-11-15
+
+Tools: Julia 1.12.1, JuliaSyntax 1.0.2.
+
+* `julia --project=. -e 'using Pkg; Pkg.test()'`: 366 passed, 0 failed.
+* Not run here: the Julia 1.9.4 with JuliaSyntax 0.4 leg (CI runs it), the
+  Idris2 and Zig scaffold under `src/interface/`.
+
+The detailed plan and the MVP plan say that the Julia tests were never run and
+that a Julia workflow is still to be added. Both statements are out of date.
+`.github/workflows/julia.yml` exists and the tests run.
+
+== Holes
+
+[cols="1,4,2",options="header"]
+|===
+| ID | Hole | State
+| H0 | The audit reported `POLICY CLEAN` for `@ccall`, `@cfunction`, `llvmcall`, `cglobal`, `unsafe_wrap`, `pointer_from_objref`, `include`, `include_string`, an alias of a forbidden call, and `getfield(Base, :unsafe_load)`. | Closed. 19 tests fail without the fix.
+| H1 | The audit is a deny-list by name. A name that the program builds from a string at run time is not visible. | Open. Closed by the typed-SSA front end (M2), which must use an allow-list.
+| H2 | The mutation score for `@inbounds` is a number that the caller supplies. | Open. Slice A follow-up: bind it to evidence.
+| H3 | No `Manifest.toml`, and `mise.toml` sets `julia = "latest"`. | Open. F6.
+| H4 | `src/interface/` and `verification/proofs/` are template samples. They prove nothing about this package. | Open. Replace or remove in M6.
+|===
+
+== Definition of v1.0.0
+
+The seven family gates apply. The text below is the Apodeixis reading.
+
+[cols="1,4,3",options="header"]
+|===
+| Gate | Acceptance | Falsifier
+| Language boundary | Closed subset on typed SSA from `code_typed`, with an allow-list. Dynamic dispatch, `eval` and unmodeled foreign calls fail closed. | A method added after verification changes behaviour and the evidence stays valid.
+| Source connection | Obligations come from the specialised method body. The key binds the method instance, the Julia version and the world age. | A body, a dependency or a Julia version changes and old evidence is reused.
+| Semantics | Numeric tiers 1 to 4 with no silent crossing. Arrays and loops with invariants. FFI through a checked ABI manifest. | An `Int` overflow or an out-of-bounds read is accepted.
+| Replay | A source-derived obligation replays through ECHIDNA. Status PROVED never comes from a solver exit code alone. | UNKNOWN or a timeout becomes PROVED.
+| Practical coverage | Three pilots: scalar kernel, array loop, one FFI wrapper. | A second package needs special cases.
+| Assurance | Mutation evidence replaces the supplied score. Package tests and the gate run on both supported Julia versions. | A mutant survives because a check did not run.
+| Release and estate | Registered in the General registry or documented as not registered. README, deed and changelog true. | A `POLICY CLEAN` result is described as a proof.
+|===
+
+== Sequence
+
+[cols="1,4,1,1,3",options="header"]
+|===
+| Stage | Work | Lead | Size | Exit evidence
+| A0 Truth (W0) | Correct the stale statements in the two plan documents. Decide the lock policy (H3). Add an audit benchmark on a fixed corpus (F5). | Sonnet; Haiku for the edits | S | The plan documents match the code. One benchmark baseline from a real run.
+| A1 Evidence spine (W1) | Adopt the family status words and receipt schema (F3). Stable serialisation of `AuditReport`. Maps to WP-00, WP-01, slice A follow-up, M0. | Sonnet from an Opus schema | M | The audit emits a receipt with status INCOMPLETE through the kit.
+| A2 Contracts and first obligation (W2) | `ContractSpec` parser (slice B, M1). Compiler adapter on `code_typed` (slice C, M2). One `@verified` scalar `Int` function to one obligation (slices D and E, M3 and M4). ECHIDNA replay (F7). | Opus | L | The W2 family exit evidence, with the reuse measures.
+| A3 Arrays, loops, numeric tiers (W3) | Slices F and G, M5 and M7. Close H1 and H2. | Opus, advisor review of the tier rules | XL (split first) | A bounds counterexample and an overflow counterexample are rejected.
+| A4 FFI seam (W3, F8) | Slice H, M6. Julia `ccall` wrappers checked against an ABI manifest. Zig code goes to `atoma`. Close H4. | Opus | L | A wrong layout or a retained pointer is rejected.
+| A5 Receipts and bot (W4) | Slice J, M8, WP-11. Cache invalidation. | Sonnet from an Opus design | M | Stale evidence fails. Adversarial receipts fail.
+| A6 Pilots and release (W5) | Three pilots. Release audit (F12). | Opus for pilots; Sonnet for release | L | All seven gates pass on the release commit.
+|===
+
+The mapping from slices to milestones is approximate. The detailed plan is the
+authority for the content of each work package.
+
+Sonnet does the implementation tasks inside each stage from an Opus brief.
+Haiku runs the scout pass before each step. The advisor reviews the close of
+each stage and each change to a status word.
+
+== What Apodeixis.jl takes from the family, and gives
+
+* Takes: the evidence kit (F3), the ECHIDNA client (F7), Zig checks from
+  `atoma` (F8).
+* Gives: the numeric tier model. It is the natural owner of the Julia side of
+  an ECHIDNA coprocessor contract (F10), if the owner opens that work.
+* The coprocessor is not wired today. No file in this repository refers to it.
+
+== Stop points
+
+* If the compiler adapter (M2) cannot give stable typed SSA across the two
+  supported Julia versions, narrow the supported versions. Do not weaken the
+  source connection gate.
+* Do not start A3 before it is split into parts of size L or smaller.
