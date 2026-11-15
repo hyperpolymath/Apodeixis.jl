@@ -78,7 +78,8 @@
 
 "use strict";
 
-const { existsSync, readFileSync, statSync, writeFileSync, appendFileSync } = require("node:fs");
+const { existsSync, mkdirSync, readFileSync, statSync, writeFileSync, appendFileSync } = require("node:fs");
+const { dirname, join } = require("node:path");
 
 // ---------------------------------------------------------------------------
 // Exit codes
@@ -135,9 +136,11 @@ function renderBadge(label, state) {
 // A file on the badges branch carrying one of these (and otherwise a valid
 // shield badge) is a known predecessor of this lane's badge, so it is
 // migrated (replaced with the canonical badge) rather than refused as foreign.
-// Any other label stays a refusal. The old K9 lane was labelled "k9-deed L0" + U+2013 + "L2".
+// Any other label stays a refusal. The old K9 lane was labelled "k9-deed L0" + U+2013 + "L2";
+// a later renderer wrote "K9 L0" + U+2013 + "L2" (read on the governance-badges branches of
+// the estate, 14 Nov 2026: atoma has the second form, Apodeixis.jl the first).
 const LEGACY_LABELS = Object.freeze({
-    K9: Object.freeze(["k9-deed L0\u2013L2"]),
+    K9: Object.freeze(["k9-deed L0\u2013L2", "K9 L0\u2013L2"]),
 });
 
 // inspectBadge - is this text a shield-endpoint object?
@@ -556,6 +559,39 @@ function resolveIntent({ label, laneResult, artifact }) {
         );
     }
     return { state: "success", bytes: Buffer.from(renderBadge(label, "success"), "utf8"), faults };
+}
+
+
+// ---------------------------------------------------------------------------
+// stage: write the badge into a directory that a Pages artifact is built from
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the lane's badge exactly as publish does (same resolveIntent, so the
+ * same "no false green" rules) and write it to <out-dir>/<path>. Nothing here
+ * talks to the network or to a branch: the Branch-Floor ruleset governs branch
+ * writes, and a Pages deployment is not one. Overwrites the destination.
+ * Return 0, or 3 (after writing the honest grey badge) when evidence is unusable.
+ * @throws {UsageError} For missing/invalid options.
+ */
+function cmdStage(opts) {
+    const label = requireLabel(opts.label);
+    const dest = requireDest(opts.path);
+    if (opts["lane-result"] === undefined) throw new UsageError("stage needs --lane-result");
+    if (!opts.artifact) throw new UsageError("stage needs --artifact");
+    if (!opts["out-dir"]) throw new UsageError("stage needs --out-dir");
+    const intent = resolveIntent({ label, laneResult: opts["lane-result"], artifact: opts.artifact });
+    const target = join(opts["out-dir"], dest);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, intent.bytes);
+    const entry = STATE_TABLE[intent.state];
+    console.log(
+        `governance-badge: staged ${oneLine(target)} (state=${intent.state}, message=${entry.message}, colour=${entry.color})`,
+    );
+    for (const fault of intent.faults) console.log(`::error::${oneLine(fault)}`);
+    setOutput("state", intent.state);
+    setOutput("colour", entry.color);
+    return intent.faults.length ? EXIT_GREY_FAULT : EXIT_OK;
 }
 
 // ---------------------------------------------------------------------------
@@ -984,6 +1020,8 @@ function usage() {
         [
             "usage:",
             "  governance-badge.js render --label K9 --state success [--out FILE]",
+            "  governance-badge.js stage --label K9 --lane-result success --artifact FILE \\",
+            "        --out-dir DIR --path badges/k9.json   (the Pages route; no branch write)",
             "  governance-badge.js publish --label K9 --lane-result success \\",
             "        --artifact FILE --branch governance-badges --path badges/k9.json \\",
             "        [--repo owner/name] [--source-sha SHA] [--commit-message TEXT]",
@@ -1008,6 +1046,7 @@ async function main(argv) {
         return EXIT_OK;
     }
     if (command === "render") return cmdRender(opts);
+    if (command === "stage") return cmdStage(opts);
     if (command === "publish") return cmdPublish(opts);
     throw new UsageError(`unknown command: ${command}`);
 }

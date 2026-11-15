@@ -115,6 +115,7 @@ detect_langs() {
   [ -n "$(first gleam.toml)" ]          && out+=(gleam)
   [ -n "$(first dune-project)" ]        && out+=(ocaml)
   { [ -n "$(first '*.cabal')" ] || [ -n "$(first stack.yaml 1)" ]; } && out+=(haskell)
+  [ -n "$(first '*.affine' 3)" ]       && out+=(affinescript)
   [ -n "$(first package.json)" ]        && out+=(bun)
   [ ${#out[@]} -eq 0 ] && out+=(docs)
   printf '%s\n' "${out[@]}"
@@ -136,6 +137,8 @@ lang_tools() {
     gleam)   echo "gleam erl" ;;
     ocaml)   echo "opam dune ocaml" ;;
     haskell) echo "ghc cabal" ;;
+    # Not a mise tool: the compiler is a release binary from hyperpolymath/affinescript.
+    affinescript) echo "affinescript" ;;
     # One package.json, every runtime (LANGUAGE-POLICY §1.4): bun runs it, and
     # `js-runtimes regen` needs deno and pnpm to write their locks too.
     bun)     echo "bun deno pnpm" ;;
@@ -158,13 +161,13 @@ lang_guix() {
     ocaml)   echo "ocaml dune opam ocaml-findlib" ;;
     haskell) echo "ghc cabal-install" ;;
     docs)    echo "ruby-asciidoctor" ;;
-    julia|bun) echo "" ;;
+    julia|bun|affinescript) echo "" ;;
   esac
 }
 # Tools a Guix shell cannot supply, so mise (inside that shell) does.
 lang_guix_gap() {
   case "$1" in
-    idris2) echo "idris2 (via pack)" ;; julia) echo julia ;; gleam) echo gleam ;; bun) echo "bun deno pnpm" ;; docs) echo lychee ;;
+    idris2) echo "idris2 (via pack)" ;; affinescript) echo "affinescript (release binary)" ;; julia) echo julia ;; gleam) echo gleam ;; bun) echo "bun deno pnpm" ;; docs) echo lychee ;;
   esac
 }
 # Print deduplicated base and detected-language Guix package specifications.
@@ -221,6 +224,7 @@ lang_remedy() {
     gleam)   echo "mise use gleam@latest erlang@latest" ;;
     ocaml)   echo "mise use opam@latest && opam init -y && opam switch create . --deps-only -y" ;;
     haskell) echo "ghcup: https://www.haskell.org/ghcup/  (or: just dev-shell, which uses Guix)" ;;
+    affinescript) echo "install the compiler from https://github.com/hyperpolymath/affinescript (release binary named affinescript, on PATH)" ;;
     bun)     echo "mise use bun@latest deno@latest pnpm@latest" ;;
   esac
 }
@@ -298,6 +302,11 @@ lang_cmd() { # $1 lang, $2 verb  -> prints a shell command, or nothing (= N/A)
     haskell:test)  echo "cabal test all" ;;
     haskell:bench) grep -qs '^benchmark' ./*.cabal && echo "cabal bench all" ;;
     haskell:run)   echo "cabal run" ;;
+
+    # AffineScript: no dependency-fetch, test or fmt verb exists here, and build needs an
+    # entry file and output only the repo knows, so those stay empty (lang_run says N/A).
+    # A repo sets build in its deed: affinescript compile FILE -o OUT.bun.js --bun-esm
+    affinescript:lint) git ls-files '*.affine' 2>/dev/null | grep -q . && echo "for f in \$(git ls-files '*.affine'); do affinescript check \"\$f\" || exit 1; done" ;;
 
     bun:deps)  [ -f bun.lock ] || [ -f bun.lockb ] && echo "bun install --frozen-lockfile" || echo "bun install" ;;
     bun:build) grep -qs '"build"[[:space:]]*:' package.json && echo "bun run build" ;;
@@ -463,7 +472,7 @@ guix_stub_reason() {
 # beside lang_tools and lang_remedy, so no second per-language table exists.
 lang_title() { case "$1" in
   rust) echo Rust ;; idris2) echo Idris2 ;; julia) echo Julia ;; zig) echo Zig ;; elixir) echo Elixir ;;
-  gleam) echo Gleam ;; ocaml) echo OCaml ;; haskell) echo Haskell ;; bun) echo Bun ;; docs) echo Docs ;; esac; }
+  gleam) echo Gleam ;; ocaml) echo OCaml ;; haskell) echo Haskell ;; affinescript) echo AffineScript ;; bun) echo Bun ;; docs) echo Docs ;; esac; }
 # What a language's route needs from the OS: "fedora|debian|macos command|why", or nothing.
 lang_sysdeps() { case "$1" in
   rust)    echo "gcc pkgconf-pkg-config|build-essential pkg-config|xcode-select --install|Rust links through the system C toolchain, and pkg-config finds C libraries" ;;

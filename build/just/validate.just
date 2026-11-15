@@ -54,30 +54,17 @@ validate-rsr:
         want() {
             [ "$(field "$1" "$2")" = "$3" ] || MISSING="$MISSING $DEED:$1:$2"
         }
-        # Identity is the chora (standards A1, rulings R4, U1 to U4, V1): one
-        # :repo-uuid on the deed header, minted once from the repo's birth
-        # path and carried as the opaque literal #uuid"<lowercase RFC 9562>",
-        # version 5 or 8. The legacy name literals #u5"…" and #u8"…" are still
-        # read and are reported, not failed: their cutover date is the owner's.
-        RAW_UUID="$(sed -n -E 's/^[[:space:]]*:repo-uuid[[:space:]]+(#(uuid|u5|u8)"[^"]*").*/\1/p' "$DEED" | head -1)"
-        case "$RAW_UUID" in
-            '#uuid"'*)
-                printf '%s' "$RAW_UUID" | grep -Eq '^#uuid"[0-9a-f]{8}-[0-9a-f]{4}-[58][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"$' \
-                    || MISSING="$MISSING $DEED:repo-uuid(#uuid literal is not a lowercase v5/v8 RFC 9562 id)"
-                # A version 5 id is v5-identity (standards A1 C10, T30): a warning
-                # here, an error with RSR_STRICT=1. The chora id is version 8 (V8).
-                case "$RAW_UUID" in
-                    '#uuid"'????????-????-5*)
-                        if [ "${RSR_STRICT:-0}" = 1 ]; then
-                            MISSING="$MISSING $DEED:repo-uuid(v5-identity)"
-                        else
-                            echo "WARNING: v5-identity: $DEED :repo-uuid $RAW_UUID is a version 5 id; the chora id is #uuid\"<v8 id of the birth path>\" (standards A1 V8). RSR_STRICT=1 makes this an error."
-                        fi ;;
-                esac ;;
-            '#u5"'?*|'#u8"'?*)
-                echo "NOTE: $DEED :repo-uuid is the legacy literal $RAW_UUID; the chora id is #uuid\"<v8 id of the birth path>\" (standards A1, V1)." ;;
-            *) MISSING="$MISSING $DEED:repo-uuid" ;;
-        esac
+        # Identity is the chora (standards A1, rulings R4, U1 to U4, V1, Q2): one
+        # :repo-uuid on the deed header, minted once from the repo's birth path
+        # and carried as #uuid"<lowercase v8 id>" (or the computed #u8 form).
+        # A v5 id (v5-identity) or a #u5 literal (u5-identity) in :repo-uuid or
+        # :beholding-chora is an error in every mode (A1 v0.4.5 T30). The rule
+        # lives in scripts/check-identity.sh, tested by
+        # tests/workflows/check_identity_test.sh and run in estate-rules.yml.
+        IDENT_OUT="$(bash scripts/check-identity.sh "$DEED" 2>&1)" || {
+            printf "%s\n" "$IDENT_OUT"
+            MISSING="$MISSING $DEED:identity-literals(see above)"
+        }
         bash scripts/deed-field.sh --has "$DEED" identity || MISSING="$MISSING $DEED:(identity)"
         [ -n "$(field identity primary-forge)" ] || MISSING="$MISSING $DEED:identity:primary-forge"
         # Clade placements are identity facts, never the id and never an edict

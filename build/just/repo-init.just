@@ -860,6 +860,15 @@ repo-init archetype="":
         done < <(bash scripts/prune-archetype-modules.sh "archetypes/${ARCHETYPE}" .)
         echo "  pruned: archetypes/${ARCHETYPE}/prune.txt applied"
     fi
+    # The README ships the Idris2-ABI and Zig-FFI badges because the spine carries
+    # src/interface/. When the archetype's prune.txt removed that scaffolding the
+    # badges would claim what the child does not have, so drop their lines (the
+    # same whole-line rule as the OpenSSF badge below). A child that keeps the
+    # interface keeps the badges.
+    if [ ! -d src/interface ]; then
+        sed -i -e '/img\.shields\.io\/badge\/Idris-Inside-/d' \
+               -e '/img\.shields\.io\/badge\/Zig-Zero--overhead-/d' README.adoc 2>/dev/null || true
+    fi
 
     # Seed docs/ from the documentation seed, BEFORE substitution so the seed's
     # own placeholder tokens are rendered along with everything else.

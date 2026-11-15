@@ -93,10 +93,10 @@ what the canon says (standards `docs/CONTRACTILE-DESCRIPTILE-VALIDATION.adoc`).
   `k9-grid` artifact; it asks for `pull-requests: read` only. `k9-verdict`
   downloads that artifact and posts `report.md` to the pull request under
   `<!-- verdict-grid:k9 regenerated on every run -->`, one comment per PR,
-  updated in place. `badges` publishes `badges/k9.json` to the
-  `governance-badges` branch on eligible pushes to `main`; the README badge reads it
+  updated in place. `badges` stages `badges/k9.json` on eligible pushes to
+  `main` and `pages.yml` deploys it to GitHub Pages; the README badge reads it
   through the shields endpoint; the section "The README badges are
-  generated output" below states the contract that branch operates under.
+  generated output" below states the contract.
 * `hypatia-scan.yml` -> `verdict` job posts the Hypatia grid the same way
   (artifact `verdict-grid`, marker `<!-- verdict-grid:hypatia … -->`).
 
@@ -108,11 +108,10 @@ canonical tools, run from a standards checkout (`STANDARDS_DIR`), and skip
 with a notice when none is present. k9iser is retired estate-wide: contracts
 are authored to `1-formats/k9/spec/K9-CONTRACT-SPEC.adoc`, never generated.
 
-== The README badges are generated output (`governance-badges`)
+== The README badges are generated output (GitHub Pages)
 
 Every repository minted from this template publishes one Shields-endpoint JSON
-file per validation lane, on a *separate orphan branch* named
-`governance-badges`:
+file per validation lane on its *GitHub Pages site*:
 
 [cols="1,1,3",options="header"]
 |===
@@ -120,7 +119,7 @@ file per validation lane, on a *separate orphan branch* named
 
 | K9 conformance
 | `badges/k9.json`
-| `dogfood-gate.yml` -> `badges` job, on eligible pushes to `main`
+| `dogfood-gate.yml` -> `badges` job stages it; `pages.yml` deploys it, on pushes to `main`
 
 |===
 
@@ -128,30 +127,49 @@ file per validation lane, on a *separate orphan branch* named
 not change:
 
 ----
-https://raw.githubusercontent.com/<owner>/<repo>/governance-badges/badges/k9.json
+https://<owner>.github.io/<repo>/badges/k9.json
 ----
 
-Both halves - rendering the badge and deciding whether to publish it - live in
-`scripts/governance-badge.js`. The workflow only supplies the lane's result and
-the lane's artifact. `tests/workflows/governance_badge_test.sh` exercises the
-helper against a mock of the GitHub API and checks this directory's wiring.
+Both halves - rendering the badge and deciding what to stage - live in
+`scripts/governance-badge.js` (`render` and `stage`). The workflow only supplies
+the lane's result and the lane's artifact. `tests/workflows/governance_badge_test.sh`
+exercises the helper and checks this directory's wiring.
 
-=== It is generated output, not source
+=== Why Pages and not a branch
 
-* `governance-badges` is an *orphan* branch. Its commits are created with
-  `parents: []`, so there is *no common ancestor with `main`* - not "a little
-  history", none. It is not a variant, a release branch or a staging area.
-* *It must never be merged*, and there is nothing to merge: a pull request from
-  it would show unrelated histories. Do not open one, do not merge one, do not
-  rebase it onto `main`. Merging it would import a badges-only tree over the
-  repository's real content.
-* *Recent pushes are normal.* Eligible pushes to `main` republish the badge. A run
-  whose badge is unchanged makes *no commit at all*, so the branch is quiet
-  when the lane result is stable and moves only when the state changes.
-* It is safe to delete. The next eligible push to `main` recreates it, with no parent,
-  from scratch.
-* It carries no workflows, no code and nothing that runs. Treat it like a
-  generated site deployment, not like a branch of the repository.
+The badge used to be written straight to a generated orphan branch
+(`governance-badges`) through the contents API. The estate's `Branch-Floor`
+repository ruleset applies to *all* branches and its `code_coverage` rule
+requires a pull request, so that write was refused (HTTP 409) on every push to
+`main`. A Pages deployment is not a branch write, so it satisfies the ruleset
+without any exemption. Nothing here weakens, bypasses or excuses the ruleset.
+
+=== How it flows
+
+* `badges` (in `dogfood-gate.yml`, `contents: read` only) runs `governance-badge.js stage`
+  and uploads the result as the `governance-badge-site` artifact, even when the
+  lane's evidence was unusable (the honest grey badge is staged, then the step
+  fails the run).
+* `pages.yml` runs on `workflow_run` of "Dogfood Gate" for pushes to `main`
+  that were not cancelled, downloads that artifact, and adds `badges/k9.json` to
+  the site before deploying. A missing artifact fails the deploy loudly rather
+  than silently deleting the live badge.
+* A freshness gate in `pages.yml` skips (does not fail) any run whose commit is no
+  longer the default branch's head, so re-running an old Dogfood Gate run, or a
+  late finisher in a burst of merges, cannot overwrite the current badge. The check runs twice: at the start (`gate` job) and again in the `deploy` job right before `actions/deploy-pages`, because the build can take up to 20 minutes and in-flight runs are not cancelled. A superseded run is skipped at either point.
+* There is one Pages site per repository and a deployment replaces it wholesale,
+  which is why the badge travels *with* the site deployment. The consequence:
+  `pages.yml` has no `push` or `workflow_dispatch` trigger any more; to
+  redeploy, re-run Dogfood Gate on `main`.
+* Each deployment writes the whole badge from scratch, so the old "compare bytes
+  with the branch, make no commit" step has no meaning here and is not used.
+* It carries no workflows, no code and nothing that runs.
+* *Repository setting (owner):* Pages must be enabled with source
+  "GitHub Actions". Pages host names are lower-case; a mixed-case owner name
+  needs the lower-case form in the README URL. A repository that is itself
+  named `<owner>.github.io` is a user/organisation Pages site served at the root,
+  so its badge URL has no `/<repo>` segment; the template's URL does not handle
+  that case and it must be edited by hand.
 
 === What each colour means
 
@@ -197,67 +215,20 @@ helper against a mock of the GitHub API and checks this directory's wiring.
 *Grey means "this run did not produce a trustworthy success/failure result".*
 It does not mean "pending", "cached" or "about to go green", and it is never a
 stale green left behind by an earlier run: a workflow that runs with a skipped,
-cancelled or unavailable lane *publishes grey*.
+cancelled or unavailable lane *stages grey*.
 
 The badge reflects the *lane job's* result (`needs.k9-validate.result`), with
 the lane's artifact as a *witness*: a `success` result is only believed when the
 `k9-grid` artifact is present, well formed, byte-identical to the canonical
 render, and itself records `success`. An artifact can never turn a failed lane
-green; it can only stop a green one being published.
+green; it can only stop a green one being staged.
 
 [NOTE]
 ====
-*Known limit.* If the whole workflow run is cancelled, GitHub does not start
-the publisher at all, so the badge keeps its previous value until the next eligible push
-to `main`. No job can publish a state for a run it was not allowed to execute.
-Because the run that cancels a superseded one is itself publishing, the badge
-converges on the newest run's result rather than staying stuck.
+*Known limit.* If the whole Dogfood Gate run is cancelled, no badge is staged
+and `pages.yml` skips the deploy, so the live badge keeps its previous value
+until the next eligible push to `main`. Deployments are serialised by the
+`pages` concurrency group and are not cancelled mid-flight; the badge converges
+on the newest completed run.
 ====
 
-=== Identical content produces no commit
-
-Before writing anything, the publisher fetches the file that is currently on the
-branch and compares it *byte for byte* with the badge it has just rendered.
-
-* Identical -> it prints `unchanged`, writes no commit, and exits 0.
-* Different -> it publishes with the blob sha it just read, so a concurrent
-  publication is detected (HTTP 409) and re-evaluated instead of silently
-  overwriting the other run's commit. Publications are also serialised by a
-  per-repository `concurrency` group.
-* The JSON is never re-serialised or canonicalised to make a comparison
-  succeed. Key order and spacing are fixed by the renderer, and a file that
-  differs only in layout *is* a difference: it gets republished.
-
-=== Missing is not the same as broken
-
-The publisher distinguishes the two, because treating every API error as
-"missing" is how a badge pipeline quietly creates branches it should not:
-
-[cols="1,2",options="header"]
-|===
-| HTTP | What happens
-
-| `404` on the file, `404` on the ref
-| The branch really is absent: create it as an orphan (`parents: []`).
-
-| `404` on the file, `200` on the ref
-| The branch exists but the file does not: add the file, no new branch.
-
-| `404` on the file, anything else on the ref
-| Unknown. Fail the run; do not create a branch.
-
-| `401` / `403`
-| Authentication or permission failure. Fail; do not write.
-
-| `429` / `5xx`, or a network error
-| Transient. Retried a bounded number of times, then fail; nothing is treated
-  as missing.
-
-| Any other status
-| Fail; do not write.
-|===
-
-A malformed file that is already on the branch (not JSON, not an object, no
-`schemaVersion`, no message) is *refused*, not overwritten: it did not come from
-this tool, and silently replacing it would hide a hand edit. Repair or delete it
-and re-run.

@@ -251,6 +251,20 @@ expect_pass "mise gate (engine) detects julia at src/julia/Project.toml" mise --
 rm -rf "$JD/build"
 printf '[tools]\njust = "latest"\nshellcheck = "latest"\nyq = "latest"\ntrivy = "latest"\njulia = "latest"\n' > "$JD/mise.toml"
 expect_pass "mise gate (--detect mirror) detects julia at src/julia/Project.toml" mise --root "$JD" --detect
+
+# AffineScript (.affine) is detected by BOTH detectors, needs no mise tool (the
+# compiler is a release binary), and its lint is a type-check of tracked files.
+AD="$WORK/affine-detect"; mkdir -p "$AD/src" "$AD/build/just"
+cp "$REPO_DIR/build/just/provision-lib.sh" "$AD/build/just/"
+printf 'fn main() -> Int { 0 }\n' > "$AD/src/main.affine"
+printf '[tools]\njust = "latest"\nshellcheck = "latest"\nyq = "latest"\n' > "$AD/mise.toml"
+if [ "$(cd "$AD" && PROVISION_ROOT="$AD" bash build/just/provision-lib.sh langs 2>/dev/null | tr '\n' ' ' | xargs)" = affinescript ]; then
+    pass "provision-lib detects a .affine file as affinescript"
+else bad "provision-lib detects a .affine file as affinescript"; fi
+expect_pass "mise gate (engine) asks no mise tool for affinescript" mise --root "$AD"
+rm -rf "$AD/build"
+printf '[tools]\njust = "latest"\nshellcheck = "latest"\nyq = "latest"\ntrivy = "latest"\n' > "$AD/mise.toml"
+expect_pass "mise gate (--detect mirror) detects affinescript and asks no mise tool" mise --root "$AD" --detect
 # Same julia mise.toml, but the only Project.toml sits under node_modules: julia is
 # then declared for no detected language, which is the finding to look for.
 JV="$WORK/julia-vendored"; mkdir -p "$JV/node_modules/dep" "$JV/build/just"
@@ -299,6 +313,37 @@ printf '# SPDX-License-Identifier: MPL-2.0\nname: {{PROJECT_NAME}}\n' > "$M2/REA
 expect_fail "token gate fails on an answerable token in a minted tree that still carries the generator" \
     bash "$REPO_DIR/scripts/check-mint-tokens.sh" --quiet --root "$M2"
 
+
+# Documents whose SUBJECT is a token (a changelog line about an unfilled
+# project-name token, a damage report, the checker's own comments) quote it in
+# prose. In a minted tree nothing can answer such a quotation, and the mint's
+# rewrite pass would turn the sentence into a false one, so they are listed in
+# .machine_readable/mint-verbatim.txt: the mint leaves them alone and neither
+# completeness check reads them. Positive and negative control on a fixture,
+# then a guard that the real list names every such document in this tree.
+# The placeholder gate exempts a template repo by name (GITHUB_REPOSITORY, which
+# CI sets to this repo), so those controls pin a child name to stay hermetic.
+M3="$WORK/minted-prose"; mkdir -p "$M3/build/just" "$M3/.machine_readable"
+cp "$REPO_DIR/build/just/repo-init.just" "$M3/build/just/"
+printf '= Changelog\n\nAn unfilled {{PROJECT_NAME}} passed the gate.\n' > "$M3/CHANGELOG.adoc"
+: > "$M3/.machine_readable/mint-verbatim.txt"
+expect_fail "token gate fails on prose that quotes a token when the document is not listed verbatim" \
+    bash "$REPO_DIR/scripts/check-mint-tokens.sh" --quiet --root "$M3"
+expect_fail "placeholder gate fails on the same prose when the document is not listed verbatim" \
+    env GITHUB_REPOSITORY=hyperpolymath/example-child bash "$REPO_DIR/scripts/check-no-placeholders.sh" "$M3"
+printf 'CHANGELOG.adoc   # prose quotes the project-name brace token\n' > "$M3/.machine_readable/mint-verbatim.txt"
+expect_pass "token gate passes once the prose document is listed verbatim" \
+    bash "$REPO_DIR/scripts/check-mint-tokens.sh" --quiet --root "$M3"
+expect_pass "placeholder gate passes once the prose document is listed verbatim" \
+    env GITHUB_REPOSITORY=hyperpolymath/example-child bash "$REPO_DIR/scripts/check-no-placeholders.sh" "$M3"
+for doc in CHANGELOG.adoc docs/reports/compliance/RSR-TEMPLATE-DAMAGE-2026-10-30.adoc \
+           docs/status/TEST-NEEDS.adoc scripts/survey-template-damage.sh \
+           scripts/check-mint-tokens.sh tests/aspect_tests.sh; do
+    if [ -f "$REPO_DIR/$doc" ] && grep -q '{{[A-Za-z_][A-Za-z0-9_]*}}' "$REPO_DIR/$doc"; then
+        expect_pass "mint-verbatim.txt lists $doc, which quotes a token in prose" \
+            grep -qE "^$doc([[:space:]]|\$)" "$REPO_DIR/.machine_readable/mint-verbatim.txt"
+    fi
+done
 echo ""
 echo "── Archetype prune ────────────────────────────────────────"
 

@@ -144,19 +144,23 @@ jobs:
           path: ${{ runner.temp }}/k9-grid/badge.json
           if-no-files-found: error
 
-  # The live README badge: badges/k9.json (shields endpoint schema) published to
-  # the generated `governance-badges` ORPHAN branch on every push to main.
+  # The live README badge: badges/k9.json (shields endpoint schema), staged here
+  # and DEPLOYED by pages.yml to the repository's GitHub Pages site on every push
+  # to main.
+  #
+  # It is no longer written to a branch. The estate's Branch-Floor ruleset
+  # applies to every branch and requires a pull request, so a direct write to
+  # the old `governance-badges` orphan branch was refused (HTTP 409). A Pages
+  # deployment is not a branch write, so the ruleset is satisfied, not bypassed.
   #
   # Operational contract (the long form is in .github/workflows/README.adoc):
-  #   * the branch is generated output - no common ancestor with main, no PR,
-  #     never merged. That is why the branch is built with `parents: []` and
-  #     never with main's head;
-  #   * identical bytes produce NO commit;
+  #   * this job only STAGES the badge and uploads it as the
+  #     `governance-badge-site` artifact; pages.yml (workflow_run) deploys it;
   #   * only a `success` lane result may render brightgreen;
   #   * skipped, cancelled, unavailable and unrecognised states render
-  #     lightgrey. Running with a skipped lane PUBLISHES grey; it must never
-  #     leave a previous green badge in place, which is why this job no longer
-  #     excludes `needs.k9-validate.result == 'skipped'`.
+  #     lightgrey. Running with a skipped lane STAGES grey; it must never
+  #     leave a previous green badge in place, which is why this job does not
+  #     exclude `needs.k9-validate.result == 'skipped'`.
   #
   # scripts/governance-badge.js owns the whole decision, so it can be unit
   # tested without a repository, a token or a network.
@@ -167,14 +171,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      contents: write
-    # One publisher at a time per repository. The contents API is ALSO
-    # sha-checked, so a race that slips past the queue is detected (409) and
-    # re-evaluated against what the other run wrote instead of blindly
-    # overwriting it.
-    concurrency:
-      group: governance-badges-${{ github.repository }}
-      cancel-in-progress: false
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -198,24 +195,31 @@ jobs:
           name: k9-grid
           path: ${{ runner.temp }}/k9-grid
 
-      - name: Publish badges/k9.json to the governance-badges branch
+      # Exit 3 (grey because the lane evidence was unusable) still writes the
+      # honest grey badge, and the upload below still runs, so the deployed
+      # badge stops claiming success; the step itself then fails the run.
+      - name: Publish badges/k9.json (stage it for the Pages deployment)
         env:
-          GITHUB_TOKEN: ${{ github.token }}
           LANE_RESULT: ${{ needs.k9-validate.result }}
           ARTIFACT: ${{ runner.temp }}/k9-grid/badge.json
-          BRANCH: governance-badges
+          OUT_DIR: ${{ runner.temp }}/governance-badge-site
           DEST: badges/k9.json
-          SOURCE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          bun scripts/governance-badge.js publish \
+          bun scripts/governance-badge.js stage \
             --label K9 \
             --lane-result "$LANE_RESULT" \
             --artifact "$ARTIFACT" \
-            --branch "$BRANCH" \
-            --path "$DEST" \
-            --repo "$GITHUB_REPOSITORY" \
-            --source-sha "$SOURCE_SHA"
+            --out-dir "$OUT_DIR" \
+            --path "$DEST"
+
+      - name: Upload the badge for the Pages deployment
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: governance-badge-site
+          path: ${{ runner.temp }}/governance-badge-site
+          if-no-files-found: error
 
   # ---------------------------------------------------------------------------
   # Job 3: Empty-linter — invisible character detection

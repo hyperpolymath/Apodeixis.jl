@@ -572,6 +572,7 @@ async function main() {
             ["legacy red skipped badge", '{"schemaVersion":1,"label":"K9","message":"skipped","color":"red"}\n', "skipped", SKIPPED_BADGE],
             ["legacy unrecognised message", '{"schemaVersion":1,"label":"K9","message":"pending","color":"blue"}\n', "success", SUCCESS_BADGE],
             ["legacy K9 label (k9-deed L0\u2013L2), as published by the earlier renderer", '{"schemaVersion":1,"label":"k9-deed L0\u2013L2","message":"passing","color":"brightgreen"}\n', "success", SUCCESS_BADGE],
+            ["legacy K9 label (K9 L0\u2013L2) with message conformant, as published by the later renderer", '{"color":"brightgreen","label":"K9 L0\u2013L2","message":"conformant","schemaVersion":1}\n', "success", SUCCESS_BADGE],
         ]) {
             await testWithApi(`existing ${name} is updated to canonical bytes`, {
                 branchExists: true, fileBytes: bytes,
@@ -776,6 +777,10 @@ async function main() {
             ["a foreign label that is not a K9 predecessor", '{"schemaVersion":1,"label":"coverage","message":"success","color":"brightgreen"}\n'],
             ["the legacy K9 label with a missing message", '{"schemaVersion":1,"label":"k9-deed L0\u2013L2","color":"red"}\n'],
             ["the legacy K9 label with the wrong schemaVersion", '{"schemaVersion":2,"label":"k9-deed L0\u2013L2","message":"passing","color":"brightgreen"}\n'],
+            ["the K9 L0\u2013L2 label with the wrong schemaVersion", '{"schemaVersion":2,"label":"K9 L0\u2013L2","message":"conformant","color":"brightgreen"}\n'],
+            ["the K9 L0\u2013L2 label with a missing message", '{"schemaVersion":1,"label":"K9 L0\u2013L2","color":"brightgreen"}\n'],
+            ["a near-miss of the K9 predecessor (hyphen for the en dash)", '{"schemaVersion":1,"label":"K9 L0-L2","message":"conformant","color":"brightgreen"}\n'],
+            ["a near-miss of the K9 predecessor (trailing space)", '{"schemaVersion":1,"label":"K9 L0\u2013L2 ","message":"conformant","color":"brightgreen"}\n'],
             ...INVALID_BADGES,
         ]) {
             const api = createApi({ branchExists: true, fileBytes: text });
@@ -1605,6 +1610,35 @@ async function main() {
                 check(out.stdout.includes("could not write $GITHUB_OUTPUT"), "the output failure is visible");
             });
         }
+
+        // stage: the Pages route (no branch write, so the Branch-Floor ruleset is satisfied)
+        const stageDir = join(work, "stage-out");
+        const stageArgs = (laneResult, artifactPath) => [
+            "stage", "--label", LABEL, "--lane-result", laneResult,
+            "--artifact", artifactPath, "--out-dir", stageDir, "--path", DEST,
+        ];
+        for (const [lane, artifactPath, expected, code] of [
+            ["success", goodArtifact, SUCCESS_BADGE, 0],
+            ["failure", goodArtifact, FAILURE_BADGE, 0],
+            ["skipped", missingArtifact, SKIPPED_BADGE, 0],
+            ["success", missingArtifact, GREY_BADGE, 3],
+        ]) {
+            await test(`stage writes the ${lane} lane with evidence ${artifactPath === goodArtifact ? "present" : "missing"}`, () => {
+                rmSync(stageDir, { recursive: true, force: true });
+                const out = runSync(stageArgs(lane, artifactPath));
+                equal(out.code, code, out.stderr + out.stdout);
+                equal(readFileSync(join(stageDir, DEST), "utf8"), expected, "staged bytes");
+            });
+        }
+        await test("stage cannot be turned green by an artifact on a failed lane", () => {
+            const out = runSync(stageArgs("failure", goodArtifact));
+            equal(readFileSync(join(stageDir, DEST), "utf8"), FAILURE_BADGE, "no false green");
+            check(out.code === 0, "failure is an honest result, not a fault");
+        });
+        await test("stage refuses a path outside badges/ and a missing out-dir", () => {
+            equal(runSync(["stage", "--label", LABEL, "--lane-result", "success", "--artifact", goodArtifact, "--out-dir", stageDir, "--path", "../x.json"]).code, 2, "traversal");
+            equal(runSync(["stage", "--label", LABEL, "--lane-result", "success", "--artifact", goodArtifact, "--path", DEST]).code, 2, "no out-dir");
+        });
 
         await test("the workflow's artifact producer would render the same bytes", () => {
             const out = runSync(["render", "--label", "K9", "--state", "success"]);

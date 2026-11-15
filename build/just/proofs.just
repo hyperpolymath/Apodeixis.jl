@@ -54,8 +54,17 @@ proof-status:
     # PROOF-STATUS may live at root, docs/status/ (post-#20), .md or .adoc (post-#23)
     for candidate in docs/status/PROOF-STATUS.adoc docs/status/PROOF-STATUS.md PROOF-STATUS.adoc PROOF-STATUS.md; do
         if [ -f "$candidate" ]; then
-            grep -E "^\| \*\*Total\*\*|^\| \*Total\*" "$candidate" 2>/dev/null || echo "(No summary row in $candidate)"
-            exit 0
+            case "$candidate" in
+                *.adoc)
+                    echo "Claims in $candidate (no overall total: a census is reported with its denominator):"
+                    bash scripts/proof-claims-rows.sh "$candidate" || echo "(no claims rows found in $candidate)"
+                    exit 0 ;;
+                *)
+                    # The claims reader reads AsciiDoc only. Say so, and fail:
+                    # a Markdown status file must not look like an empty census.
+                    echo "$candidate is Markdown: the claims reader reads PROOF-STATUS.adoc. Migrate the file." >&2
+                    exit 1 ;;
+            esac
         fi
     done
     echo "(No PROOF-STATUS file found at root or docs/status/)"

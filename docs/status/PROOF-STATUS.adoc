@@ -26,10 +26,13 @@ row here claims a proof. Do not replace the table with a percentage or an
 ** `PWG-2i`: one recheck leg also counts (Rocq or Lean);
 ** `PWG-2ii`: both legs count;
 ** `PWG-1`: every counted witness has a current receipt for the exact commit;
-** `ungraded`: a theory theorem below `PWG-3`;
-** `n/a`: not a theory theorem (a test, a refusal fixture, an assumption, or an
-   engineering proof in Idris2, SPARK, Creusot or Verus). §8.1 puts these off the
-   ladder.
+** `ungraded`: a theory row below `PWG-3`, or any row with no receipt yet, an
+   `open` row included, whether it is a theory theorem or an engineering
+   obligation;
+** `n/a`: not on the ladder once it has a result: a test, a refusal fixture, an
+   assumption, or a discharged engineering proof in Idris2, SPARK, Creusot or
+   Verus. §8.1 puts these off the ladder. An `open` engineering obligation is not `n/a`: an `open` engineering
+   obligation stays `ungraded` until it has a receipt.
 * *Recheck legs* (§2): `transported`, `re-proved`, `waived` or `unavailable`,
   each with its §2.2 correspondence state, for example `BRIDGE-PENDING` or
   `RECONCILED`. A leg counts towards a grade only when it is `RECONCILED`.

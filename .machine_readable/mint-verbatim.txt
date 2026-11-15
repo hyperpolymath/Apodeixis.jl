@@ -36,3 +36,8 @@ tests/e2e/language_profiles_mint_test.sh   # minted-tree fixtures; keeps archety
 tests/workflows/resolve_template_pin_test.sh  # template-slug fixtures
 tests/ffi_strings_test.sh                  # FFI token fixture, filled in a scratch copy
 tests/workflows/container_kyaml_test.sh    # container token fixtures (template only)
+CHANGELOG.adoc                             # prose quotes the project-name brace token when it describes a mint failure
+docs/reports/compliance/RSR-TEMPLATE-DAMAGE-2026-10-30.adoc  # the report is about the unfilled project-name brace token
+scripts/survey-template-damage.sh          # searches children for an unfilled project-name brace token
+scripts/check-mint-tokens.sh               # the gate's own comments name the tokens it checks
+tests/aspect_tests.sh                      # a comment names the lowercase brace token that symbol names may carry

@@ -78,15 +78,19 @@ State, metadata, anchor and policy facts are clauses of the repo deed
 
 === Container Standard
 
+Applies only if this repo builds a container (it has a `build/container/` module or a Containerfile). A repo without one has nothing to follow here.
+
 - Runtime: **Podman** (never Docker).
 - File: **Containerfile** (never Dockerfile).
-- Base images: `cgr.dev/chainguard/wolfi-base:latest` or `cgr.dev/chainguard/static:latest`.
+- Base images: `cgr.dev/chainguard/wolfi-base` or `cgr.dev/chainguard/static`, pinned by digest (`@sha256:<digest>`); a tag is not a pin.
 
 === ABI/FFI Standard
 
+Applies only if this repo carries an ABI/FFI seam (a `src/interface/` directory). Archetype minting may prune it; a repo without it has nothing to follow here.
+
 - ABI definitions: **Idris2** with dependent types (`src/interface/Abi/`).
-- FFI implementation: **Zig** with C ABI compatibility (`ffi/zig/`).
-- Generated C headers: `generated/abi/`.
+- FFI implementation: **Zig** with C ABI compatibility (`src/interface/ffi/`).
+- Generated C headers: `src/interface/generated/`.
 
 === Build System
 

@@ -33,6 +33,7 @@ WORKFLOW="$REPO_DIR/.github/workflows/dogfood-gate.yml"
 LOCK="$REPO_DIR/.github/workflows/actions.lock"
 README="$REPO_DIR/README.adoc"
 HELPER="$REPO_DIR/scripts/governance-badge.js"
+PAGES="$REPO_DIR/.github/workflows/pages.yml"
 JS_SUITE="$REPO_DIR/tests/workflows/governance_badge_test.js"
 
 fail=0
@@ -139,16 +140,12 @@ wiring_checks() {
     else
         wire_fail "the badges job is missing"
     fi
+    has "the badges job has its own steps: key (a lost key invalidates the whole workflow)" '^    steps:$' "$badge_job"
     has "the badges job needs the K9 lane" '^    needs: k9-validate$' "$badge_job"
-    has "the badges job always runs, even after a failed or cancelled lane" 'if: always\(\)' "$badge_job"
+    has "the badges job always runs, even after a failed or cancelled lane" '^    if: always\(\)' "$badge_job"
     has "the badges job only publishes from main" "github\.ref == 'refs/heads/main'" "$badge_job"
     has "the badges job only publishes on push" "github\.event_name == 'push'" "$badge_job"
     hasnt "a skipped lane is NOT excluded (it must publish grey)" "!=\s*'skipped'" "$badge_job"
-
-    echo "  --- publications are serialised, not raced ---"
-    has "job-level concurrency groups publications" '^    concurrency:$' "$badge_job"
-    has "the group is per repository" 'group: governance-badges-\$\{\{ github\.repository \}\}' "$badge_job"
-    has "publications queue instead of cancelling each other" '^      cancel-in-progress: false$' "$badge_job"
 
     echo "  --- least privilege ---"
     if grep -Eq '^permissions:$' "$workflow" &&
@@ -157,12 +154,8 @@ wiring_checks() {
     else
         wire_fail "workflow-wide permissions must stay 'contents: read'"
     fi
-    has "only the badges job asks for contents: write" '^      contents: write$' "$badge_job"
-    if [[ "$(grep -c 'contents: write' "$workflow")" = "1" ]]; then
-        wire_pass "contents: write appears exactly once in the workflow"
-    else
-        wire_fail "contents: write must appear exactly once (scoped to the badges job)"
-    fi
+    has "the badges job needs only contents: read (it writes no branch)" '^      contents: read$' "$badge_job"
+    hasnt "no job in the workflow asks for contents: write" 'contents: write' "$workflow"
 
     echo "  --- the lane artifact is still the evidence ---"
     local upload_step
@@ -178,9 +171,11 @@ wiring_checks() {
     echo "  --- the helper owns rendering and publishing ---"
     has "the lane artifact is rendered by the helper" 'governance-badge\.js render' "$generate_step"
     has "the artifact records the validation step's outcome" '\$\{\{ steps\.validate\.outcome \}\}' "$generate_step"
-    has "the publisher is the helper" 'governance-badge\.js publish' "$publish_step"
-    has "the publisher is told the lane's actual result" 'needs\.k9-validate\.result' "$publish_step"
-    has "the publisher receives the artifact as evidence" 'ARTIFACT: \$\{\{ runner\.temp \}\}/k9-grid/badge\.json' "$publish_step"
+    has "the stager is the helper" 'governance-badge\.js stage' "$publish_step"
+    hasnt "the helper's branch-write route is not used by the workflow" 'governance-badge\.js publish' "$badge_job"
+    has "the staged badge is uploaded for the Pages deployment" 'name: governance-badge-site' "$badge_job"
+    has "the stager is told the lane's actual result" 'needs\.k9-validate\.result' "$publish_step"
+    has "the stager receives the artifact as evidence" 'ARTIFACT: \$\{\{ runner\.temp \}\}/k9-grid/badge\.json' "$publish_step"
     hasnt "no inline gh api writes remain" 'gh api' "$badge_job"
     hasnt "no inline contents PUT remains" '-X PUT' "$badge_job"
     hasnt "a publication fault must fail the step" 'continue-on-error: true' "$publish_step"
@@ -206,11 +201,21 @@ wiring_checks() {
         wire_pass "actions.lock records the badges job's actions"
     fi
 
-    echo "  --- the badge URL and the orphan guarantee survive ---"
+    echo "  --- the Pages deployment carries the staged badge ---"
+    local pages_wf="$PAGES"
+    has "pages.yml deploys after Dogfood Gate completes" 'workflows: \["Dogfood Gate"\]' "$pages_wf"
+    hasnt "pages.yml has no bare push trigger (it would erase the badge)" '^  push:' "$pages_wf"
+    has "pages.yml fetches the staged badge from the triggering run" 'run-id: \$\{\{ github\.event\.workflow_run\.id \}\}' "$pages_wf"
+    has "pages.yml only deploys the default branch's current head (freshness gate)" 'needs\.gate\.outputs\.current == '"'"'true'"'"'' "$pages_wf"
+    has "pages.yml build can read the Pages config" '^      pages: read' "$pages_wf"
+    has "pages.yml adds badges/k9.json to the site" '_site/badges/k9\.json' "$pages_wf"
+
+    echo "  --- the helper's invariants survive ---"
     # The template's README carries the tokens; a minted child's carries its
     # own owner and repo. Either is the stable raw URL.
     if bash "$(dirname "$README")/scripts/is-template-tree.sh" "$(dirname "$README")"; then
-    has "README still reads the stable raw URL" 'raw\.githubusercontent\.com/(\{\{OWNER\}\}/\{\{REPO\}\}|[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/governance-badges/badges/k9\.json' "$README"
+    has "README reads the stable Pages URL" 'https://(\{\{OWNER\}\}|[A-Za-z0-9_.-]+)\.github\.io/(\{\{REPO\}\}|[A-Za-z0-9_.-]+)/badges/k9\.json' "$README"
+    hasnt "README no longer reads the ruleset-blocked branch" 'governance-badges/badges/k9\.json' "$README"
     else echo "  SKIP: README badge URL (not the template tree)"; fi
     has "the orphan commit is built with no parents" 'parents: \[\]' "$HELPER"
     hasnt "the helper never names a source branch as a ref" 'refs/heads/(main|master)' "$HELPER"
@@ -260,12 +265,106 @@ fire_case "dropping always() from the badges job" \
     "s/if: always\(\) && github\.event_name/if: github.event_name/"
 fire_case "re-excluding skipped lanes" \
     "s/(github\.ref == 'refs\/heads\/main')/\\1 \&\& needs.k9-validate.result != 'skipped'/"
-fire_case "letting publications cancel each other" \
-    "s/cancel-in-progress: false/cancel-in-progress: true/"
+fire_case "losing the badges job's steps: key" \
+    "/^  badges:\$/,/^  [a-z0-9-]+:\$/ s/^    steps:\$//"
+fire_case "giving the badges job a branch-write permission again" \
+    "s/^      contents: read\$/      contents: write/"
 fire_case "failing the artifact download instead of publishing grey" \
     "s/^        continue-on-error: true$/        continue-on-error: false/"
 fire_case "pointing the publisher back at inline gh api" \
-    "s/bun scripts\/governance-badge\.js publish/gh api repos\/\$GITHUB_REPOSITORY\/contents\/\$DEST/"
+    "s/bun scripts\/governance-badge\.js stage/gh api repos\/\$GITHUB_REPOSITORY\/contents\/\$DEST/"
+
+# ---------------------------------------------------------------------------
+# 4. The Pages deploy job re-checks freshness right before deploying
+# ---------------------------------------------------------------------------
+# pages_freshness_checks PAGES_YML -> 0 if the deploy job refuses a stale run.
+# Structural checks, then the re-check step's real shell is extracted from the
+# YAML and RUN against a stub `gh`: a stale run must write current=false and a
+# current run current=true, and neither may fail the step.
+pages_freshness_checks() {
+    local pages="$1" tmp block step rc
+    WIRE_FAIL=0
+    tmp="$(mktemp -d)"
+    block="$tmp/deploy.yml"
+    job_block "$pages" deploy > "$block"
+    has "the deploy job can read the default branch head" '^      contents: read' "$block"
+    has "the deploy job has the re-check step" 'id: fresh' "$block"
+    has "deploying is conditional on the re-check" "if: steps\\.fresh\\.outputs\\.current == 'true'" "$block"
+
+    # Extract the re-check step's run: body (indent 12 -> 0).
+    awk '/id: fresh/ { seen = 1 }
+         seen && /^        run: \|$/ { grab = 1; next }
+         grab && /^      - name:/ { exit }
+         grab { if ($0 ~ /^          /) { sub(/^          /, ""); print } else if ($0 !~ /^$/) { exit } }' "$block" > "$tmp/step.sh"
+    if [[ ! -s "$tmp/step.sh" ]]; then
+        wire_fail "could not extract the re-check step's script"
+        rm -rf "$tmp"; return 1
+    fi
+
+    mkdir -p "$tmp/bin"
+    cat > "$tmp/bin/gh" <<'FAKE_GH'
+#!/usr/bin/env bash
+echo "$FAKE_HEAD"
+FAKE_GH
+    chmod +x "$tmp/bin/gh"
+
+    local head="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" other="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" out
+    for case in current stale; do
+        out="$tmp/out-$case"; : > "$out"
+        local run_sha="$head"; [[ "$case" = stale ]] && run_sha="$other"
+        PATH="$tmp/bin:$PATH" GITHUB_REPOSITORY=o/r GITHUB_OUTPUT="$out" FAKE_HEAD="$head" RUN_SHA="$run_sha" \
+            bash "$tmp/step.sh" >/dev/null 2>&1
+        rc=$?
+        if [[ "$rc" -ne 0 ]]; then
+            wire_fail "the re-check step failed (exit $rc) for a $case run; a superseded run must be skipped, not failed"
+        elif [[ "$case" = current ]] && grep -qx 'current=true' "$out"; then
+            wire_pass "a current run is allowed to deploy"
+        elif [[ "$case" = stale ]] && grep -qx 'current=false' "$out"; then
+            wire_pass "a superseded run is refused"
+        else
+            wire_fail "the re-check gave the wrong verdict for a $case run: $(cat "$out")"
+        fi
+    done
+    rm -rf "$tmp"
+    return "$WIRE_FAIL"
+}
+
+echo ""
+echo "=== 4. Pages deploy: a stale run is refused right before deploying ==="
+if pages_freshness_checks "$PAGES"; then
+    echo "PASS: deploy freshness re-check"
+else
+    echo "FAIL: deploy freshness re-check"
+    fail=1
+fi
+
+echo ""
+echo "=== 5. Firing: the freshness checks fail on a broken pages.yml ==="
+pages_fire_case() {
+    local label="$1" mutation="$2" tmp copy
+    tmp="$(mktemp -d)"
+    copy="$tmp/pages.yml"
+    sed -E "$mutation" "$PAGES" > "$copy"
+    if cmp -s "$PAGES" "$copy"; then
+        echo "  FAIL: mutation had no effect: $label" >&2
+        echo "::error::governance-badge pages firing control: mutation had no effect: $label"
+        fail=1; rm -rf "$tmp"; return
+    fi
+    if pages_freshness_checks "$copy" >/dev/null 2>&1; then
+        echo "  FAIL: $label was not caught" >&2
+        echo "::error::governance-badge pages firing control: $label was not caught"
+        fail=1
+    else
+        echo "  PASS: $label is caught"
+    fi
+    rm -rf "$tmp"
+}
+pages_fire_case "deploying without consulting the re-check" \
+    "/^      - name: Deploy to GitHub Pages/,/uses:/ s/^        if: steps\.fresh\.outputs\.current == 'true'\$/        if: always()/"
+pages_fire_case "a re-check that lets a stale run through" \
+    "s/^          if \[ \"\\\$head\" = \"\\\$RUN_SHA\" \]; then\$/          if true; then/"
+pages_fire_case "a re-check that fails a superseded run instead of skipping it" \
+    "s/not deploying its badge\.\"\$/not deploying its badge.\"; exit 1/"
 
 echo ""
 if [[ "$fail" -ne 0 ]]; then

@@ -81,9 +81,14 @@ if [ -z "$TOOLS" ]; then
     exit 2
 fi
 
+# Copyright lines are carried over from the file being replaced, never written
+# here: rendering used to drop them, and licence text is not ours to invent.
+COPYRIGHT="$(grep '^# SPDX-FileCopyrightText:' "$ROOT/mise.toml" 2>/dev/null || true)"
+
 render() {
+    echo "# SPDX-License-Identifier: MPL-2.0"
+    [[ -z "$COPYRIGHT" ]] || printf '%s\n' "$COPYRIGHT"
     cat <<EOF
-# SPDX-License-Identifier: MPL-2.0
 #
 # The toolchain for this repository (${LANGS}). Rendered at mint by
 # scripts/render-mise.sh from the languages the tree declares; the language→tool
