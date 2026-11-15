@@ -10,6 +10,12 @@ https://semver.org/spec/v2.0.0.html[Semantic Versioning].
 
 ==== Fixed
 
+* Source-policy audit (2026-11-15): the audit reported `POLICY CLEAN` for
+  `@ccall`, `@cfunction`, `llvmcall`, `cglobal`, `unsafe_wrap`,
+  `pointer_from_objref`, `include`, `include_string`, an alias of a forbidden
+  call, and `getfield(Base, :unsafe_load)`. It now rejects each of them. Every
+  name that starts with `unsafe_` is forbidden, in every position. The audit
+  is still a deny-list by name and is not a proof.
 * The K9 badge publisher failed on every push to `main` in minted repos: it
   wrote straight to the `governance-badges` branch, and the estate's
   `Branch-Floor` ruleset (all branches, `code_coverage` requires a pull

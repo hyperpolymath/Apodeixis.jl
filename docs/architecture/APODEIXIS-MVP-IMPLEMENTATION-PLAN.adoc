@@ -80,7 +80,7 @@ its fail-closed tests and independent evidence boundary are in place.
 |Slice |State |Implementation tasks |Acceptance gate
 
 |A. Package bootstrap and source policy
-|Code present; Julia tests not yet run
+|Code present; package tests pass (366 on Julia 1.12.1, 2026-11-15); CI runs Julia 1.9.4 and 1.12.1
 |Run Julia 1.9+ CI; fix all package and parser API errors; test CLI exit codes;
   publish findings as stable API; add parser version and source hash to output.
 |`Pkg.test()` green on lowest and newest supported Julia; malicious macro

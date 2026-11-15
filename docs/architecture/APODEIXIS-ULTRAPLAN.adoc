@@ -227,7 +227,8 @@ claim the whole package complete while its gate is red.
 . Fix parser API or syntax issues; pin supported dependency ranges and decide
   whether to commit a `Manifest.toml` for CI/dev tooling or keep the package as
   a library without a committed lock.
-. Add a Julia CI workflow using the repository's existing action pinning and
+. Done: `.github/workflows/julia.yml` exists and is in `actions.lock`. The original step was:
+  add a Julia CI workflow using the repository's existing action pinning and
   `actions.lock` conventions; include the Julia workflow in the lock file and
   run the repository action-lock consistency check.
 . Check formatter/linter policy after adding the workflow; do not bypass a red
