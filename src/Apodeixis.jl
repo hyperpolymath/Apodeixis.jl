@@ -41,15 +41,53 @@ const _FORBIDDEN_MACROS = Set((
     Symbol("@generated"), Symbol("@eval"), Symbol("@fastmath"),
 ))
 
+# Entries to foreign code. None has a checked ABI model yet.
+const _FOREIGN_CALLS = Set((:ccall, :cglobal, :llvmcall))
+const _FOREIGN_MACROS = Set((Symbol("@ccall"), Symbol("@cfunction")))
+
+# Dynamic evaluation, code loading and raw object addresses. Every name that
+# starts with `unsafe_` is forbidden as well (see `_is_forbidden_name`).
 const _FORBIDDEN_CALLS = Set((
-    :eval, :invokelatest, :ccall, :unsafe_load, :unsafe_store!,
+    :eval, :invokelatest, :invoke_in_world, :include, :include_string,
+    :evalfile, :pointer_from_objref,
 ))
+
+# snip: deny-list by name. A name that the program builds from a string at run
+# time is not visible to a syntax audit; the planned typed-SSA frontend must
+# replace this list with an allow-list.
+_is_forbidden_name(name::Symbol) =
+    name in _FOREIGN_CALLS || name in _FORBIDDEN_CALLS ||
+    startswith(String(name), "unsafe_")
+
+_referenced_name(x::Symbol) = x
+_referenced_name(x::GlobalRef) = x.name
+_referenced_name(_) = nothing
 
 function _push_once!(findings::Vector{Finding}, code::Symbol, line::Int, message::String)
     # A malformed or deeply nested syntax tree can encounter the same policy
     # violation through multiple wrappers. Keep reports deterministic and tidy.
     any(f -> f.code === code && f.line == line && f.message == message, findings) ||
         push!(findings, Finding(code, max(line, 1), message))
+    return nothing
+end
+
+# A forbidden name is rejected wherever the program refers to it, not only in
+# call position: `const f = unsafe_load`, `Base.unsafe_load` and
+# `getfield(Base, :unsafe_load)` must not hide it. A quoted symbol that is only
+# data (`x = :eval`) is not a reference.
+const _REFLECTIVE_LOOKUPS = Set((:getfield, :getproperty, :getglobal))
+
+function _report_forbidden_name!(findings::Vector{Finding}, name::Symbol, line::Int)
+    if name === :ccall
+        _push_once!(findings, :APX_UNMODELED_CCALL, line,
+                    "ccall is not yet verified; use a checked ABI wrapper only after the FFI phase")
+    elseif name in _FOREIGN_CALLS
+        _push_once!(findings, :APX_UNMODELED_CCALL, line,
+                    "$(name) enters foreign code without a checked ABI model")
+    else
+        _push_once!(findings, :APX_DYNAMIC_ESCAPE, line,
+                    "$(name) is forbidden in the closed verified subset")
+    end
     return nothing
 end
 
@@ -95,12 +133,19 @@ function _walk!(x, verified::Bool, mutation_score, line::Int,
                     "lowered foreign calls require a checked Idris2/Zig ABI manifest")
     elseif x.head === :call && !isempty(x.args)
         callee = _callee_symbol(first(x.args))
-        if callee in _FORBIDDEN_CALLS
-            code = callee === :ccall ? :APX_UNMODELED_CCALL : :APX_DYNAMIC_ESCAPE
-            message = callee === :ccall ?
-                "ccall is not yet verified; use a checked ABI wrapper only after the FFI phase" :
-                "$(callee) is forbidden in the closed verified subset"
-            _push_once!(findings, code, line, message)
+        if callee isa Symbol && _is_forbidden_name(callee)
+            _report_forbidden_name!(findings, callee, line)
+        elseif callee in _REFLECTIVE_LOOKUPS
+            for arg in x.args[2:end]
+                if arg isa QuoteNode && arg.value isa Symbol && _is_forbidden_name(arg.value)
+                    _report_forbidden_name!(findings, arg.value, line)
+                end
+            end
+        end
+    elseif x.head === :.
+        member = _callee_symbol(x)
+        if member isa Symbol && _is_forbidden_name(member)
+            _report_forbidden_name!(findings, member, line)
         end
     end
 
@@ -108,6 +153,10 @@ function _walk!(x, verified::Bool, mutation_score, line::Int,
         macro_name = _macro_symbol(first(x.args))
         line_arg = findfirst(arg -> arg isa LineNumberNode, x.args)
         macro_line = line_arg === nothing ? line : Int(x.args[line_arg].line)
+        if macro_name in _FOREIGN_MACROS
+            _push_once!(findings, :APX_UNMODELED_CCALL, macro_line,
+                        "$(macro_name) enters foreign code without a checked ABI model")
+        end
         if macro_name in _FORBIDDEN_MACROS
             _push_once!(findings, :APX_FORBIDDEN_MACRO, macro_line,
                         "$(macro_name) is forbidden in the verified subset")
@@ -156,6 +205,10 @@ function _walk!(x, verified::Bool, mutation_score, line::Int,
         if arg isa LineNumberNode
             current_line = Int(arg.line)
         else
+            name = _referenced_name(arg)
+            if name isa Symbol && _is_forbidden_name(name)
+                _report_forbidden_name!(findings, name, current_line)
+            end
             current_line = _walk!(arg, child_verified, mutation_score, current_line, findings)
         end
     end

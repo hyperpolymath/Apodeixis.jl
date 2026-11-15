@@ -338,6 +338,44 @@ function invoke(args)
 end
 end
 
+@testset "Forbidden names are rejected in every position" begin
+    foreign = (
+        "f(x) = @ccall strlen(x::Cstring)::Csize_t",
+        "f() = @cfunction(g, Cint, ())",
+        "f() = Base.llvmcall(\"ret void\", Cvoid, Tuple{})",
+        "f() = cglobal(:jl_options)",
+    )
+    for source in foreign
+        @test codes(audit_source(source)) == Set((:APX_UNMODELED_CCALL,))
+    end
+
+    escapes = (
+        "f(p) = unsafe_wrap(Array, p, 4)",
+        "f(x) = pointer_from_objref(x)",
+        "f(p) = unsafe_pointer_to_objref(p)",
+        "include(\"other.jl\")",
+        "f(s) = include_string(Main, s)",
+        "const load = unsafe_load\nf(p) = load(p)",
+        "import Base: unsafe_load as load",
+        "f(p) = getfield(Base, :unsafe_load)(p)",
+        "f(p) = map(Base.unsafe_load, p)",
+        "@verified function f(p)\n    unsafe_wrap(Array, p, 4)\nend",
+    )
+    for source in escapes
+        @test codes(audit_source(source)) == Set((:APX_DYNAMIC_ESCAPE,))
+    end
+
+    # A foreign macro inside @verified keeps the unmodeled-macro finding too.
+    both = audit_source("@verified function f(x)\n    @ccall strlen(x::Cstring)::Csize_t\nend")
+    @test codes(both) == Set((:APX_UNMODELED_CCALL, :APX_UNMODELED_MACRO))
+
+    # Names that only resemble a forbidden name, and quoted data, stay clean.
+    for source in ("safe_load(p) = p", "x = :unsafe_load", "evaluation = 1",
+                   "s = \"unsafe_wrap(Array, p, 4)\"")
+        @test is_policy_clean(audit_source(source))
+    end
+end
+
 @testset "CLI argument handling and audit output" begin
     for flag in ("--help", "-h")
         result = CLIUnderTest.invoke([flag])
