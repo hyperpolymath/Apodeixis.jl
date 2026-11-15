@@ -42,3 +42,4 @@ docs/reports/compliance/RSR-TEMPLATE-DAMAGE-2026-10-30.adoc  # the report is abo
 scripts/survey-template-damage.sh          # searches children for an unfilled project-name brace token
 scripts/check-mint-tokens.sh               # the gate's own comments name the tokens it checks
 tests/aspect_tests.sh                      # a comment names the lowercase brace token that symbol names may carry
+tests/workflows/test_needs_minted_test.sh  # fixtures name the brace placeholder the mint converts
