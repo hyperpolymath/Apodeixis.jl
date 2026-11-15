@@ -31,6 +31,7 @@ tests/e2e/chain_mint_test.sh               # chain fixtures: parent names and pa
 tests/workflows/mint_cleanup_test.sh       # instruction-block fixture
 tests/workflows/self_name_pass_test.sh     # template-name fixtures
 tests/workflows/template_conformance_test.sh  # template-slug fixtures
+tests/workflows/julia_library_test.sh      # PACKAGE_UUID brace-token fixture
 tests/workflows/mint_gates_test.sh       # names an unanswered token, on purpose
 tests/e2e/language_profiles_mint_test.sh   # minted-tree fixtures; keeps archetype paths
 tests/workflows/resolve_template_pin_test.sh  # template-slug fixtures

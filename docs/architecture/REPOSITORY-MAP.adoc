@@ -81,13 +81,13 @@ predecessors did.
 | yes
 | git reads .mailmap from the worktree root only
 
-| `Apodeixis.jl_chora.deed`
-| yes
-| the repo deed: universal AI entry point; family-7 allocation manifest + ply tree folded in (standards#837 pilot). Filename carries the repo slug (deed dispatch <stem>_chora.deed), so repo-init renames it at mint
-
 | `.uuid-v8-exempt`
 | optional
 | scripts/check-uuid-v8.sh reads this exact root path: the negative-control tests that hold #u5 on purpose (owner-approved 2026-11-14)
+
+| `Apodeixis.jl_chora.deed`
+| yes
+| the repo deed: universal AI entry point; family-7 allocation manifest + ply tree folded in (standards#837 pilot). Filename carries the repo slug (deed dispatch <stem>_chora.deed), so repo-init renames it at mint
 
 | `CHANGELOG.adoc`
 | yes
