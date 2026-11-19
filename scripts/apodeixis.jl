@@ -6,8 +6,47 @@ using Apodeixis
 
 function usage(io=stdout)
     println(io, "Usage: julia --project=. scripts/apodeixis.jl audit [--mutation-score PERCENT] FILE.jl")
+    println(io, "       julia --project=. scripts/apodeixis.jl audit-package [--mutation-score PERCENT] ROOT.jl")
     println(io, "       julia --project=. scripts/apodeixis.jl --help")
     println(io, "Audits source policy only; POLICY CLEAN is not a verification proof.")
+end
+
+function run_package(file, score)
+    report = try
+        audit_package(file; mutation_score=score)
+    catch err
+        println(stderr, "Apodeixis could not read ", file, ": ", sprint(showerror, err))
+        return 2
+    end
+    for r in report.reports
+        if isempty(r.findings)
+            println("POLICY CLEAN (NOT VERIFIED): ", r.filename)
+        else
+            println("REJECTED: ", r.filename)
+            for f in r.findings
+                println("  ", f.code, " [line ", f.line, "]: ", f.message)
+            end
+        end
+    end
+    if !isempty(report.findings)
+        println("PACKAGE FINDINGS:")
+        for f in report.findings
+            println("  ", f.code, " [line ", f.line, "]: ", f.message)
+        end
+    end
+    if !isempty(report.unreached)
+        println("UNREACHED (not audited, no include reaches them):")
+        for u in report.unreached
+            println("  ", u)
+        end
+    end
+    nfiles = length(report.reports)
+    nbad = count(r -> !isempty(r.findings), report.reports)
+    println(is_policy_clean(report) ? "PACKAGE POLICY CLEAN (NOT VERIFIED): " : "PACKAGE REJECTED: ",
+            nfiles, " file(s) reached, ", nbad, " with findings, ",
+            length(report.findings), " package finding(s), ",
+            length(report.unreached), " unreached")
+    return is_policy_clean(report) ? 0 : 1
 end
 
 function main(args)
@@ -15,7 +54,8 @@ function main(args)
         usage()
         return isempty(args) ? 2 : 0
     end
-    args[1] == "audit" || (usage(stderr); return 2)
+    args[1] in ("audit", "audit-package") || (usage(stderr); return 2)
+    package_mode = args[1] == "audit-package"
 
     score = nothing
     file = nothing
@@ -43,6 +83,7 @@ function main(args)
 
     file === nothing && (usage(stderr); return 2)
     isfile(file) || (println(stderr, "file not found: ", file); return 2)
+    package_mode && return run_package(file, score)
     report = try
         audit_file(file; mutation_score=score)
     catch err
