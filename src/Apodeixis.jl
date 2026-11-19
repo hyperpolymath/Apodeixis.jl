@@ -12,7 +12,8 @@ module Apodeixis
 
 using JuliaSyntax
 
-export Finding, AuditReport, audit_source, audit_file, is_policy_clean
+export Finding, AuditReport, PackageReport, audit_source, audit_file,
+       audit_package, is_policy_clean
 
 """One source-policy diagnostic. `line` is 1-based when known."""
 struct Finding
@@ -228,13 +229,20 @@ inside `@verified` bodies and unmodeled foreign calls are rejected.
 """
 function audit_source(source::AbstractString; filename::AbstractString="<memory>",
                       mutation_score::Union{Nothing,Real}=nothing)
+    return _audit(String(source), String(filename), mutation_score, nothing)
+end
+
+# Shared by `audit_source` and package mode. `prepare!`, when given, receives
+# the parsed tree before the walk and may rewrite it (package mode removes the
+# one permitted form of `include`). `audit_source` passes `nothing`.
+function _audit(source::String, filename::String, mutation_score, prepare!)
     if mutation_score !== nothing && !(0 <= mutation_score <= 100)
         throw(ArgumentError("mutation_score must be a percentage between 0 and 100"))
     end
 
     findings = Finding[]
     expr = try
-        JuliaSyntax.parseall(Expr, String(source))
+        JuliaSyntax.parseall(Expr, source)
     catch err
         _push_once!(findings, :APX_PARSE_ERROR, 1,
                     "JuliaSyntax could not parse source: " * sprint(showerror, err))
@@ -242,16 +250,189 @@ function audit_source(source::AbstractString; filename::AbstractString="<memory>
     end
 
     if expr !== nothing
+        prepare! === nothing || prepare!(expr)
         _walk!(expr, false, mutation_score, 1, findings)
     end
 
     status = isempty(findings) ? :policy_clean : :rejected
-    return AuditReport(String(filename), status, findings)
+    return AuditReport(filename, status, findings)
 end
 
 """Read and audit a Julia source file."""
 function audit_file(path::AbstractString; kwargs...)
     return audit_source(read(path, String); filename=String(path), kwargs...)
+end
+
+# ---------------------------------------------------------------------------
+# Package mode
+# ---------------------------------------------------------------------------
+
+"""
+Result of `audit_package`: the root file, one `AuditReport` per reached file
+(in the order reached), package-level findings, and the `.jl` files under the
+root directory that no `include` reaches. Unreached files are listed so that an
+unaudited file is visible; they are not findings and do not change `status`.
+Package-level findings name the including file in their message and carry the
+line of the `include` in that file.
+"""
+struct PackageReport
+    root::String
+    status::Symbol
+    reports::Vector{AuditReport}
+    findings::Vector{Finding}
+    unreached::Vector{String}
+end
+
+"""True when every reached file is policy clean and there is no package-level finding."""
+is_policy_clean(report::PackageReport) =
+    report.status === :policy_clean &&
+    isempty(report.findings) && all(is_policy_clean, report.reports)
+
+# The one permitted form: `include("literal.jl")`, one plain string literal
+# argument, as a statement directly at top level or directly in a module body.
+_is_literal_include(x) = x isa Expr && x.head === :call && length(x.args) == 2 &&
+                         x.args[1] === :include && x.args[2] isa String
+
+# The statement list of a `module` or `baremodule`, or `nothing`. A docstring on
+# the module (JuliaSyntax writes it as a `Core.@doc` call around the module) does
+# not change where the module body is; no other macro is looked through.
+function _module_body(x)
+    x isa Expr || return nothing
+    if x.head === :macrocall && length(x.args) == 4 && x.args[1] isa GlobalRef &&
+       x.args[1].mod === Core && x.args[1].name === Symbol("@doc")
+        x = x.args[4]
+        x isa Expr || return nothing
+    end
+    x.head === :module && length(x.args) >= 3 && x.args[end] isa Expr &&
+        x.args[end].head === :block ? x.args[end].args : nothing
+end
+
+# Remove each permitted include from the tree, record it, and leave `nothing`
+# in its place. Every other `include` stays in the tree and the walk flags it.
+function _extract_includes!(stmts::Vector{Any}, found::Vector{Tuple{String,Int}})
+    line = 1
+    for i in eachindex(stmts)
+        arg = stmts[i]
+        if arg isa LineNumberNode
+            line = Int(arg.line)
+        elseif _is_literal_include(arg)
+            push!(found, (arg.args[2], line))
+            stmts[i] = nothing
+        else
+            body = _module_body(arg)
+            body === nothing || _extract_includes!(body, found)
+        end
+    end
+    return found
+end
+
+function _extract_includes!(expr::Expr)
+    found = Tuple{String,Int}[]
+    expr.head === :toplevel && _extract_includes!(expr.args, found)
+    return found
+end
+
+_inside_dir(path::AbstractString, dir::AbstractString) =
+    path == dir || startswith(path, dir * Base.Filesystem.path_separator)
+
+"""
+    audit_package(root_file; mutation_score=nothing)
+
+Audit a package from its root file. The root and every file that a permitted
+`include` reaches are audited with the rules of `audit_source`. Only one form
+of `include` is permitted, and only here: a call with one plain string literal
+argument, written as a statement at top level or directly in a `module` or
+`baremodule` body. The path must be relative, end in `.jl`, resolve against the
+directory of the including file, and stay inside the root file's directory
+after `realpath`. Every other `include` is `APX_DYNAMIC_ESCAPE`.
+
+Package-level finding codes: `APX_INCLUDE_PATH` (path breaks a form rule),
+`APX_INCLUDE_OUTSIDE_ROOT`, `APX_INCLUDE_MISSING`, `APX_INCLUDE_DUPLICATE`
+(file reached twice), `APX_INCLUDE_CYCLE`, `APX_PACKAGE_SCAN_ERROR` (a directory
+could not be listed). This is a source-policy audit, not a proof.
+"""
+function audit_package(root_file::AbstractString;
+                       mutation_score::Union{Nothing,Real}=nothing)
+    if mutation_score !== nothing && !(0 <= mutation_score <= 100)
+        throw(ArgumentError("mutation_score must be a percentage between 0 and 100"))
+    end
+    root = String(root_file)
+    reports = AuditReport[]
+    findings = Finding[]
+
+    if !isfile(root)
+        push!(findings, Finding(:APX_INCLUDE_MISSING, 1,
+                                "root file does not exist or is not a regular file: $root"))
+        return PackageReport(root, :rejected, reports, findings, String[])
+    end
+    real_root = realpath(root)
+    root_dir = dirname(real_root)
+    visited = Set{String}()
+    stack = String[]
+
+    relname(p) = relpath(p, root_dir)
+
+    function visit(path::String, real::String)
+        push!(visited, real)
+        push!(stack, real)
+        found = Tuple{String,Int}[]
+        report = _audit(read(real, String), path, mutation_score,
+                        expr -> append!(found, _extract_includes!(expr)))
+        push!(reports, report)
+        here = dirname(real)
+        who = relname(real)
+        for (rel, line) in found
+            fail(code, msg) = push!(findings, Finding(code, max(line, 1), "$who: $msg"))
+            if isempty(rel) || occursin('\0', rel) || isabspath(rel) || !endswith(rel, ".jl")
+                fail(:APX_INCLUDE_PATH,
+                     "include path must be relative, non-empty and end in .jl: $(repr(rel))")
+                continue
+            end
+            cand = normpath(joinpath(here, rel))
+            if ispath(cand)
+                rp = realpath(cand)
+                if !_inside_dir(rp, root_dir)
+                    fail(:APX_INCLUDE_OUTSIDE_ROOT,
+                         "include leaves the package directory: $(repr(rel))")
+                elseif !isfile(rp)
+                    fail(:APX_INCLUDE_MISSING, "include is not a regular file: $(repr(rel))")
+                elseif rp in stack
+                    fail(:APX_INCLUDE_CYCLE,
+                         "include cycle: $(repr(rel)) is already being included")
+                elseif rp in visited
+                    fail(:APX_INCLUDE_DUPLICATE,
+                         "file is included more than once: $(repr(rel))")
+                else
+                    visit(cand, rp)
+                end
+            elseif !_inside_dir(cand, root_dir)
+                fail(:APX_INCLUDE_OUTSIDE_ROOT,
+                     "include leaves the package directory: $(repr(rel))")
+            else
+                fail(:APX_INCLUDE_MISSING, "included file does not exist: $(repr(rel))")
+            end
+        end
+        pop!(stack)
+        return nothing
+    end
+
+    visit(root, real_root)
+
+    unreached = String[]
+    scan_error(err) = push!(findings, Finding(:APX_PACKAGE_SCAN_ERROR, 1,
+                                              "could not list a directory: " * sprint(showerror, err)))
+    for (dir, _, files) in walkdir(root_dir; onerror=scan_error)
+        for f in files
+            endswith(f, ".jl") || continue
+            p = joinpath(dir, f)
+            rp = try realpath(p) catch; p end
+            rp in visited || push!(unreached, relname(p))
+        end
+    end
+    sort!(unreached)
+
+    clean = isempty(findings) && all(is_policy_clean, reports)
+    return PackageReport(root, clean ? :policy_clean : :rejected, reports, findings, unreached)
 end
 
 end # module Apodeixis

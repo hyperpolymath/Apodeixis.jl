@@ -461,3 +461,235 @@ end
         end
     end
 end
+
+# Package mode: one permitted form of include, every file reached is audited.
+function _make_package(files::Dict{String,String})
+    dir = realpath(mktempdir())
+    for (rel, text) in files
+        path = joinpath(dir, rel)
+        mkpath(dirname(path))
+        write(path, text)
+    end
+    return dir
+end
+
+pkg_codes(report) = Set(f.code for f in report.findings)
+
+@testset "Package mode: audit_package" begin
+    clean_pkg = Dict("a.jl" => "a() = 1\n", "b.jl" => "b() = 2\n")
+
+    @testset "(a) literal includes of clean files are clean" begin
+        dir = _make_package(merge(clean_pkg, Dict("Root.jl" =>
+            "module Root\ninclude(\"a.jl\")\ninclude(\"b.jl\")\nend\n")))
+        report = audit_package(joinpath(dir, "Root.jl"))
+        @test is_policy_clean(report)
+        @test report.status === :policy_clean
+        @test length(report.reports) == 3
+        @test isempty(report.findings)
+        @test isempty(report.unreached)
+    end
+
+    @testset "top level include and nested modules are permitted" begin
+        dir = _make_package(merge(clean_pkg, Dict("Root.jl" =>
+            "include(\"a.jl\")\nbaremodule M\nmodule N\ninclude(\"b.jl\")\nend\nend\n")))
+        @test is_policy_clean(audit_package(joinpath(dir, "Root.jl")))
+    end
+
+    @testset "a docstring on the module does not hide its body" begin
+        dir = _make_package(merge(clean_pkg, Dict("Root.jl" =>
+            "\"\"\"Docs.\"\"\"\nmodule Root\ninclude(\"a.jl\")\n\"\"\"Inner.\"\"\"\nmodule N\ninclude(\"b.jl\")\nend\nend\n")))
+        @test is_policy_clean(audit_package(joinpath(dir, "Root.jl")))
+        # Only the docstring form is looked through, not an arbitrary macro.
+        dir = _make_package(Dict("Root.jl" => "@other module Root\ninclude(\"a.jl\")\nend\n",
+                                 "a.jl" => "a() = 1\n"))
+        @test !is_policy_clean(audit_package(joinpath(dir, "Root.jl")))
+    end
+
+    @testset "(b) an included file with eval is not clean" begin
+        dir = _make_package(Dict("Root.jl" => "include(\"a.jl\")\n",
+                                 "a.jl" => "f(x) = eval(x)\n"))
+        report = audit_package(joinpath(dir, "Root.jl"))
+        @test !is_policy_clean(report)
+        @test isempty(report.findings)
+        @test is_policy_clean(report.reports[1])
+        @test :APX_DYNAMIC_ESCAPE in codes(report.reports[2])
+    end
+
+    @testset "(c) computed paths are flagged" begin
+        for arg in ("\"a\" * \".jl\"", "joinpath(\"a.jl\")", "\"\$(1)a.jl\"",
+                    "raw\"a.jl\"", "name", "\"a.jl\"; x = 1", "@__FILE__")
+            dir = _make_package(Dict("Root.jl" => "name = \"a.jl\"\ninclude($arg)\n",
+                                     "a.jl" => "a() = 1\n"))
+            report = audit_package(joinpath(dir, "Root.jl"))
+            @test !is_policy_clean(report)
+            @test :APX_DYNAMIC_ESCAPE in codes(report.reports[1])
+        end
+    end
+
+    @testset "(d) include in a non-statement position is flagged" begin
+        bodies = (
+            "function f()\n include(\"a.jl\")\nend",
+            "f() = include(\"a.jl\")",
+            "let\n include(\"a.jl\")\nend",
+            "begin\n include(\"a.jl\")\nend",
+            "if true\n include(\"a.jl\")\nend",
+            "for i in 1:2\n include(\"a.jl\")\nend",
+            "while false\n include(\"a.jl\")\nend",
+            "try\n include(\"a.jl\")\ncatch\nend",
+            "foreach(1:2) do i\n include(\"a.jl\")\nend",
+            "g = () -> include(\"a.jl\")",
+            "quote\n include(\"a.jl\")\nend",
+            "struct S\n x::Int\n S() = new(include(\"a.jl\"))\nend",
+            "@eval include(\"a.jl\")",
+            "@static if true\n include(\"a.jl\")\nend",
+            "@other include(\"a.jl\")",
+            "x = include(\"a.jl\")",
+            "module M\nf() = include(\"a.jl\")\nend",
+        )
+        for body in bodies
+            dir = _make_package(Dict("Root.jl" => body * "\n", "a.jl" => "a() = 1\n"))
+            report = audit_package(joinpath(dir, "Root.jl"))
+            @test !is_policy_clean(report)
+            @test :APX_DYNAMIC_ESCAPE in codes(report.reports[1])
+            @test length(report.reports) == 1
+        end
+    end
+
+    @testset "(e) a path that leaves the root is flagged" begin
+        outer = _make_package(Dict("outside.jl" => "o() = 1\n"))
+        mkpath(joinpath(outer, "pkg"))
+        write(joinpath(outer, "pkg", "Root.jl"), "include(\"../outside.jl\")\n")
+        report = audit_package(joinpath(outer, "pkg", "Root.jl"))
+        @test !is_policy_clean(report)
+        @test :APX_INCLUDE_OUTSIDE_ROOT in pkg_codes(report)
+        @test length(report.reports) == 1
+
+        abs_dir = _make_package(Dict("Root.jl" => "include(\"$(joinpath(outer, "outside.jl"))\")\n"))
+        report = audit_package(joinpath(abs_dir, "Root.jl"))
+        @test :APX_INCLUDE_PATH in pkg_codes(report)
+        @test !is_policy_clean(report)
+
+        for rel in ("a.txt", "a", "")
+            d = _make_package(Dict("Root.jl" => "include(\"$rel\")\n"))
+            @test :APX_INCLUDE_PATH in pkg_codes(audit_package(joinpath(d, "Root.jl")))
+        end
+
+        if !Sys.iswindows()
+            linked = _make_package(Dict("Root.jl" => "include(\"link.jl\")\ninclude(\"dir/b.jl\")\n"))
+            symlink(joinpath(outer, "outside.jl"), joinpath(linked, "link.jl"))
+            symlink(outer, joinpath(linked, "dir"))
+            report = audit_package(joinpath(linked, "Root.jl"))
+            @test !is_policy_clean(report)
+            @test count(f -> f.code === :APX_INCLUDE_OUTSIDE_ROOT, report.findings) >= 1
+            @test length(report.reports) == 1
+        end
+    end
+
+    @testset "(f) a missing file is flagged" begin
+        dir = _make_package(Dict("Root.jl" => "include(\"nope.jl\")\n"))
+        report = audit_package(joinpath(dir, "Root.jl"))
+        @test !is_policy_clean(report)
+        @test :APX_INCLUDE_MISSING in pkg_codes(report)
+        @test only(report.findings).line == 1
+        @test !is_policy_clean(audit_package(joinpath(dir, "absent.jl")))
+    end
+
+    @testset "(g) a file included twice is flagged" begin
+        dir = _make_package(Dict("Root.jl" => "include(\"a.jl\")\ninclude(\"a.jl\")\n",
+                                 "a.jl" => "a() = 1\n"))
+        report = audit_package(joinpath(dir, "Root.jl"))
+        @test !is_policy_clean(report)
+        @test :APX_INCLUDE_DUPLICATE in pkg_codes(report)
+        @test length(report.reports) == 2
+    end
+
+    @testset "(h) an include cycle is flagged" begin
+        dir = _make_package(Dict("Root.jl" => "include(\"a.jl\")\n",
+                                 "a.jl" => "include(\"b.jl\")\n",
+                                 "b.jl" => "include(\"a.jl\")\n"))
+        report = audit_package(joinpath(dir, "Root.jl"))
+        @test !is_policy_clean(report)
+        @test :APX_INCLUDE_CYCLE in pkg_codes(report)
+        @test length(report.reports) == 3
+
+        self = _make_package(Dict("Root.jl" => "include(\"Root.jl\")\n"))
+        @test :APX_INCLUDE_CYCLE in pkg_codes(audit_package(joinpath(self, "Root.jl")))
+    end
+
+    @testset "(i) Base.include, Core.include and two-argument include are flagged" begin
+        for call in ("Base.include(@__MODULE__, \"a.jl\")", "Core.include(Main, \"a.jl\")",
+                     "include(identity, \"a.jl\")", "include(\"a.jl\", \"b.jl\")",
+                     "include()", "g = include", "map(include, [\"a.jl\"])")
+            dir = _make_package(Dict("Root.jl" => call * "\n", "a.jl" => "a() = 1\n"))
+            report = audit_package(joinpath(dir, "Root.jl"))
+            @test !is_policy_clean(report)
+            @test :APX_DYNAMIC_ESCAPE in codes(report.reports[1])
+            @test length(report.reports) == 1
+        end
+    end
+
+    @testset "(j) nested include resolves against the including file" begin
+        dir = _make_package(Dict("Root.jl" => "include(\"sub/mid.jl\")\n",
+                                 "sub/mid.jl" => "include(\"leaf.jl\")\ninclude(\"../top.jl\")\n",
+                                 "sub/leaf.jl" => "leaf() = 1\n",
+                                 "top.jl" => "top() = 2\n"))
+        report = audit_package(joinpath(dir, "Root.jl"))
+        @test is_policy_clean(report)
+        @test length(report.reports) == 4
+        @test isempty(report.unreached)
+
+        # The same name beside the root is a different, missing file.
+        miss = _make_package(Dict("Root.jl" => "include(\"sub/mid.jl\")\n",
+                                  "sub/mid.jl" => "include(\"leaf.jl\")\n",
+                                  "leaf.jl" => "leaf() = 1\n"))
+        report = audit_package(joinpath(miss, "Root.jl"))
+        @test :APX_INCLUDE_MISSING in pkg_codes(report)
+        @test report.unreached == ["leaf.jl"]
+    end
+
+    @testset "(k) unreached files are listed and do not change cleanliness" begin
+        dir = _make_package(Dict("Root.jl" => "include(\"a.jl\")\n", "a.jl" => "a() = 1\n",
+                                 "stray.jl" => "eval(:(1))\n", "deep/other.jl" => "o() = 1\n",
+                                 "notes.txt" => "x\n"))
+        report = audit_package(joinpath(dir, "Root.jl"))
+        @test is_policy_clean(report)
+        @test report.unreached == ["deep/other.jl", "stray.jl"]
+    end
+
+    @testset "(l) audit_file and audit_source still forbid include" begin
+        dir = _make_package(Dict("Root.jl" => "module Root\ninclude(\"a.jl\")\nend\n",
+                                 "a.jl" => "a() = 1\n"))
+        report = audit_file(joinpath(dir, "Root.jl"))
+        @test !is_policy_clean(report)
+        @test :APX_DYNAMIC_ESCAPE in codes(report)
+        @test :APX_DYNAMIC_ESCAPE in codes(audit_source("include(\"a.jl\")"))
+    end
+
+    @testset "mutation score is validated and passed through" begin
+        dir = _make_package(Dict("Root.jl" => "include(\"a.jl\")\n",
+                                 "a.jl" => "f(A) = @inbounds A[1]\n"))
+        @test_throws ArgumentError audit_package(joinpath(dir, "Root.jl"); mutation_score=101)
+        @test !is_policy_clean(audit_package(joinpath(dir, "Root.jl")))
+    end
+end
+
+@testset "Package mode: CLI audit-package" begin
+    dir = _make_package(Dict("Root.jl" => "include(\"a.jl\")\n", "a.jl" => "a() = 1\n",
+                             "stray.jl" => "s() = 1\n"))
+    root = joinpath(dir, "Root.jl")
+    result = CLIUnderTest.invoke(["audit-package", root])
+    @test result.status == 0
+    @test occursin("POLICY CLEAN (NOT VERIFIED): $root", result.out)
+    @test occursin("UNREACHED", result.out) && occursin("stray.jl", result.out)
+    @test occursin("2 file(s) reached, 0 with findings, 0 package finding(s), 1 unreached", result.out)
+
+    bad = _make_package(Dict("Root.jl" => "include(\"gone.jl\")\nf() = eval(1)\n"))
+    result = CLIUnderTest.invoke(["audit-package", joinpath(bad, "Root.jl")])
+    @test result.status == 1
+    @test occursin("APX_DYNAMIC_ESCAPE", result.out)
+    @test occursin("APX_INCLUDE_MISSING", result.out)
+    @test occursin("PACKAGE REJECTED", result.out)
+
+    @test CLIUnderTest.invoke(["audit-package"]).status == 2
+    @test CLIUnderTest.invoke(["audit-package", joinpath(dir, "none.jl")]).status == 2
+end

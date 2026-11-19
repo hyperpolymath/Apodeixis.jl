@@ -8,6 +8,14 @@ https://semver.org/spec/v2.0.0.html[Semantic Versioning].
 
 === [Unreleased]
 
+==== Added
+
+* Package mode: `audit_package(root_file)` and `audit-package ROOT.jl` permit
+  one form of `include` (a plain string literal, a statement at top level or
+  directly in a module body, a relative `.jl` path inside the root directory)
+  and audit every file it reaches. Other forms stay `APX_DYNAMIC_ESCAPE`.
+  Unreached `.jl` files are listed. `audit_file` still forbids `include`.
+
 ==== Fixed
 
 * Source-policy audit (2026-11-15): the audit reported `POLICY CLEAN` for
