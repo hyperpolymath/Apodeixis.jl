@@ -20,6 +20,35 @@ let data = import "claude-md-data.json" in
 # owner's voice. Until then the estate-common block is explicitly DRAFT.
 let manifesto_pin = "DRAFT-unratified" in
 
+# The estate deny list, stated once: the language-policy line below prints it,
+# and the anchor override compares the anchor's allowed list against it.
+let estate_denied = ["Nix", "Python", "Go", "TypeScript", "ReScript", "AGPL"] in
+
+# An anchor overrides the estate policy for its repo in two ways: it forbids
+# what the estate permits, and it allows what the estate denies. Both are
+# rendered, or the pack would tell an agent that an estate denial applies in a
+# repo whose anchor allows the language (Codex review of sholes#13). A language
+# the anchor allows and the estate does not deny is no override and is not
+# listed. Names are compared as written.
+let anchor_allows_denied =
+  std.array.filter (fun l => std.array.elem l estate_denied) data.anchor_allowed
+in
+let anchor_override =
+  let allows = std.string.join ", " anchor_allows_denied in
+  let forbids = std.string.join ", " data.anchor_forbidden in
+  let has_allows = std.array.length anchor_allows_denied > 0 in
+  let has_forbids = std.array.length data.anchor_forbidden > 0 in
+  let lead = "\n- **Anchor override** (ANCHOR) — This repo's anchor " in
+  let tail = ". The anchor overrides the estate policy above." in
+  if has_allows && has_forbids then
+    "%{lead}allows, where the estate policy above denies: %{allows}; it forbids: %{forbids}%{tail}"
+  else if has_allows then
+    "%{lead}allows, where the estate policy above denies: %{allows}%{tail}"
+  else if has_forbids then
+    "%{lead}forbids: %{forbids}%{tail}"
+  else ""
+in
+
 let provenance = "DEED@%{data.h_deed} ANCHOR@%{data.h_anchor}"
 in
 
@@ -57,7 +86,7 @@ The descriptive family (working name *descriptiles*) describes what-is; the **co
 
 | File | Answers |
 |---|---|
-| `%{data.deed}` | **CHORA**, the repo deed. Its `(identity)` `(clade)` `(lineage)` clauses say what this repo IS (registers into `gv-clade-index`); `(meta)` the architecture axes; `(agentic)` *may I act now?*; `(ecosystem)` where it sits and what it is not; `(status)` and `(maturity)` where it is now. Read fields with `scripts/deed-field.sh`. |
+| `%{data.deed}` | **CHORA**, the repo deed. Its header `:repo-uuid` is the repo's one id, and `(identity)` and `(lineage)` say what this repo IS; a `(clade)` clause, when present, records the repo's clade placements: identity facts about where it sits, never its id and never an edict. chora-registry (formerly `gv-clade-index`) is authoritative for them; this repo's validation checks only that a declared clade is one of the 12 shelves; `(meta)` the architecture axes; `(agentic)` *may I act now?*; `(ecosystem)` where it sits and what it is not; `(status)` and `(maturity)` where it is now. Read fields with `scripts/deed-field.sh`. |
 | `(anchor)` | *Semantic authority + golden path* — what downstream may extend-not-redefine; if a recognised-drift / re-anchor marker is present, it **supersedes** accumulated context — read it first. |
 | `(neurosym)` | *Meaning* of operations — proof obligations. |
 | `(playbook)` | *How* permitted actions run. |
@@ -65,28 +94,81 @@ The descriptive family (working name *descriptiles*) describes what-is; the **co
 | contractiles | Normative doctrine: **Intend** (north-star) · **Must** (invariants) · **Trust** (security) · **Adjust** (accessibility / inclusive design) — the integral core that holds strong; plus **Dust** (exnovation drift) · **Bust** (failure / breakage, not drift). |
 | k9 | *Validation*. Kennel (data) / Yard (pure eval) / Hunt (guarded exec). |
 
+**The chora and CLADE are different things** (owner, 2026-11-15; standards A1 CHORA-SPEC §11.1):
+- **The chora is ontological/metaphysical**: what this repo *is* and is meant to be in its context, code as identity: its intension (what defines it) and its extension (what it is an instance of). A `(clade …)` placement in it is an identity fact, copied from chora-registry, and the registry wins; never take one from a legacy file.
+- **`CLADE.deed` is logical/epistemological**: how this repo's own content is ordered. Its scheme may be strict (Linnaean), judgement or none; membership may be single or multiple; a category is decided by its criterion. It is a descriptile and never identity; none is created until A7 M3 `clade` lands.
+- **The aesthetic spans both**: what one experiences of the repo from outside, and in its ordering within.
+- A legacy `CLADE.a2ml`, or A2ML named `CLADE.deed`, feeds the chora and `STATE.deed` (standards `clade-to-repo-deed.adoc`), never a `CLADE.deed`.
+
 ## Canon pointers
-- `hyperpolymath/standards` — the canon source. · `hyperpolymath/gv-clade-index` — the estate map (identity registry). · `hyperpolymath/manifesto` — this doctrine.
+Estate data-format route: **kyq** handles exactly **TOML, Dhall, KYAML,
+I-JSON/JCS**. Preserve TOML/Dhall; migrate YAML/YML to KYAML and JSON variants
+through kyq using **hyperpolymath/ijson-jcs**, the actual estate implementation
+repository. **kyX** owns wider projection. DEED/K9/coordination keep their own
+grammars. Canon: `metadatastician/standards/3-practice/DATA-FORMAT-ROUTING.adoc`.
+Planned support is not operational evidence: retain explicit transitional
+checks until a pinned kyq executable passes positive and negative tests.
+
+- `hyperpolymath/standards` — the canon source. · `hyperpolymath/gv-clade-index` (being renamed chora-registry) — the estate registry of repo identities and classification schemes. · `hyperpolymath/manifesto` — this doctrine.
 - **Before you invent, rename, or consolidate anything: STOP and check the map + IS-NOT.**
 
 ## Estate language policy (overridable per-repo via AGENTIC)
-Deny: **Nix, Python, Go, TypeScript, ReScript, AGPL**. (Guix, not Nix.)
+Deny: **%{std.string.join ", " estate_denied}**. (Guix, not Nix.)
 JavaScript runtime: **Bun** > Deno > pnpm > npm (last resort, permitted), from one `package.json` that carries every runtime's lock (`bun.lock`, `deno.lock`, `pnpm-lock.yaml`), all written by `js-runtimes regen` (owner ruling 2026-10-14, standards LANGUAGE-POLICY §1.3–§1.4). Deno is permitted again; `package-lock.json` stays refused.
 Use plain JavaScript when this tooling is needed. TypeScript and ReScript migrate to AffineScript.
 
 ## Asking the owner
 Put every question that needs the owner's decision through the selector (the AskUserQuestion tool), not as prose at the end of a report. Batch up to four per call, offer concrete options with the recommended one first, and say what each option would cause.
 
+## Proofs — which prover for which obligation
+
+Normative source: `3-practice/PROOF-POLICY.adoc` in `hyperpolymath/standards`.
+Read it there; `verification/proofs/README.adoc` maps it onto this repo.
+
+| Code or obligation | Verifier |
+|---|---|
+| Rust code | **Creusot** with **Pearlite** contracts, and **Verus**, by default and on the code (§1.2). Kani for `unsafe`/FFI seams and Aeneas for Rust that implements an Agda theorem run alongside, never instead |
+| Ada code | **SPARK** |
+| APIs, ABIs, engineering properties | **Idris2** |
+| Theory | **Agda**, rechecked in **Rocq** and **Lean** (no Mathlib) |
+
+Always name Creusot, Pearlite and Verus in Rust verification plans and in
+`docs/status/PROOF-STATUS.adoc`. Pearlite is Creusot's specification
+language, not a third verifier. Plan scopes for both verifiers, and record
+any that is unsupported, inapplicable or not yet run, with its reason; never
+present an unexecuted check as a pass. Using both does not make two
+independent witnesses (policy §1.2).
+
+Third-party code (crates such as Bevy, libraries, forks) is **not** converted
+or re-proved. Where a proof relies on a dependency the prover does not check,
+state the reliance as an `ASSUMED` boundary specification. Where the
+dependency's whole import cone compiles under the prover's safe mode with zero
+postulates, it is *checked, not assumed*: record the cone (root module, flags,
+postulate count of zero, library name, version and pin) instead of an
+`ASSUMED` row (policy §1.1). A cone with a postulate, or compiled outside safe
+mode, is not checked. When choosing between dependencies that fit equally
+well, prefer one that carries its own verification. A preference, not a gate.
+
+Proof Witness Grades are policy §8. They apply to *theory* theorems only: Agda
+source, rechecked in Rocq and Lean (§8.1). Engineering proofs (Creusot, Verus,
+SPARK, Idris2) are not graded on this ladder; they use the §5 tokens only. For
+a theory theorem, `PWG-3` < `PWG-2i` < `PWG-2ii` < `PWG-1`, where `PWG-1` is
+strongest. A theorem that does not reach `PWG-3` is `ungraded`, with no
+qualifier. A grade is derived from receipts, never asserted. A "verified" or
+"machine-checked" claim needs current receipts. Report a census with its
+denominator, never a percentage. Always write the `PWG-` prefix: CRG, TRG, ARG
+and FRG letters, and ECHIDNA's `TrustLevel`, are different schemes.
+
 ---
 
-# This repo: `%{data.canonical_name}`  ·  clade `%{data.prefixed_name}`
+# This repo: `%{data.canonical_name}`
 
-- **Identity** — uuid `%{data.uuid}`; clade `%{data.clade_primary}` (secondary `%{data.clade_secondary}`); born %{data.born}; forge `%{data.forge_gh}`.
+- **Identity** — chora id `%{data.uuid}`; clade: %{data.clade_aid}; born %{data.born}; forge `%{data.forge_gh}`.
 - **IS** — %{data.purpose}
 - **IS-NOT** — %{data.isnot}
 - **Where it sits** — pipeline position **%{data.pipeline_pos}**; chain `%{data.chain}`; coordination = `%{data.coordination}`.
 - **Constraints here** (AGENTIC) — fail-closed; evidence-per-step; no-silent-skip; rerun-after-fix; release-claim-requires-hard-pass. Never: banned langs (above), secrets, state files in repo root, AGPL. Details: the deed's `(bot-directives (methodology) (coverage) (debt))` clauses.
-- **Golden path** (ANCHOR) — `%{data.golden_smoke}` → %{data.golden_crit}.
+- **Golden path** (ANCHOR) — `%{data.golden_smoke}` → %{data.golden_crit}.%{anchor_override}
 - **State** — phase %{data.phase}; maturity %{data.maturity}. Milestones and next actions: `docs/status/ROADMAP.adoc`.
 
 <!-- ARRIVAL-PACK:END · provenance: %{provenance} · Manifesto@%{manifesto_pin} · regenerate: `just claude-md` (k9 drift-detects; do not hand-edit above) -->
