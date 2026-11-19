@@ -503,6 +503,30 @@ pkg_codes(report) = Set(f.code for f in report.findings)
         dir = _make_package(Dict("Root.jl" => "@other module Root\ninclude(\"a.jl\")\nend\n",
                                  "a.jl" => "a() = 1\n"))
         @test !is_policy_clean(audit_package(joinpath(dir, "Root.jl")))
+
+        # A user-written doc wrapper is not the parser's docstring node.
+        for wrapper in ("Core.@doc \"d\"", "@doc \"d\"")
+            dir = _make_package(Dict("Root.jl" => "$wrapper module Root\ninclude(\"a.jl\")\nend\n",
+                                     "a.jl" => "a() = 1\n"))
+            report = audit_package(joinpath(dir, "Root.jl"))
+            @test !is_policy_clean(report)
+            @test :APX_DYNAMIC_ESCAPE in codes(report.reports[1])
+        end
+
+        # Code inside the module docstring is still audited.
+        dir = _make_package(Dict("Root.jl" => "\"\"\"Docs \$(eval(1)).\"\"\"\nmodule Root\ninclude(\"a.jl\")\nend\n",
+                                 "a.jl" => "a() = 1\n"))
+        report = audit_package(joinpath(dir, "Root.jl"))
+        @test !is_policy_clean(report)
+        @test :APX_DYNAMIC_ESCAPE in codes(report.reports[1])
+    end
+
+    @testset "a package that defines its own include is flagged" begin
+        dir = _make_package(Dict("Root.jl" => "module Root\ninclude(x) = x\ninclude(\"a.jl\")\nend\n",
+                                 "a.jl" => "a() = 1\n"))
+        report = audit_package(joinpath(dir, "Root.jl"))
+        @test !is_policy_clean(report)
+        @test :APX_DYNAMIC_ESCAPE in codes(report.reports[1])
     end
 
     @testset "(b) an included file with eval is not clean" begin
