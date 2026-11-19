@@ -126,11 +126,11 @@
   (ecosystem
     :project "Apodeixis.jl"
     :ecosystem "hyperpolymath"
-    :position-type "UNASSIGNED"
-    :purpose "UNASSIGNED"
-    :not ()
-    :pipeline-position "UNASSIGNED"
-    :chain "UNASSIGNED"
+    :position-type "verification-tool"
+    :purpose "Julia source-policy audit, and the planned verifier for a closed Julia subset. Today a fail-closed deny-list audit over JuliaSyntax parse trees; not a formal verifier."
+    :not ("a formal verifier today" "a proof of bounds safety, type stability or ABI correctness" "a repository template" "an ECHIDNA replacement")
+    :pipeline-position "language-verification"
+    :chain "Julia source and contracts -> Apodeixis policy audit -> obligations (planned) -> ECHIDNA prove and independent kernel check (planned)"
     :coordination standards
     (related :name "rsr-template-repo" :relationship minted-from :notes "the template this repo was minted from by just repo-init"))
   ; <<< repo-identity
@@ -199,7 +199,7 @@
     :version "0.1.0"
     :last-updated "2026-11-12"
     :project "Apodeixis.jl"
-    :purpose "Canonical RSR (Rhodium Standard Repository) template — governance, CI/CD, machine-readable metadata, ABI/FFI seam and formal-verification scaffolding that hyperpolymath projects are instantiated from."
+    :purpose "Julia source-policy audit and planned verifier for a closed Julia subset."
     (agent :name CLAUDE :role "proofs, compilers, repo-local implementation, CI/CD, formal verification, Rust/Idris2/Zig")
     (agent :name CHATGPT :role "prose, papers, publication review, standards docs, outreach drafts, letters")
     (agent :name GEMINI :role "estate audits, cross-repo sweeps, long-context triage, pattern detection")
